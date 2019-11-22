@@ -4,9 +4,6 @@ from pathlib import Path
 from time import sleep
 from urllib.parse import urlparse, quote
 
-# import subprocess # This was going to be for PS commands, didn't pan out
-# from O365 import MSGraphProtocol
-
 from O365.utils import ApiComponent, Pagination
 
 class User(ApiComponent):
@@ -66,7 +63,7 @@ class User(ApiComponent):
     def __eq__(self, other):
         return self.user_id == other.user_id
 
-    def new_user(self, first_name, last_name, account_enabled=False,):
+    def new_user(self, first_name, last_name, account_enabled=False):
         """ Creates a user
 
         :return: a new User
@@ -104,8 +101,8 @@ class User(ApiComponent):
         url = self.build_url(self._endpoints.get('user'))
 
 
-#add user
+#add user 
 #block user login
 #create user backup data through content search
-#download backup data through export of content search
+#download backup data through export of content search (don't think this is possible)
 
