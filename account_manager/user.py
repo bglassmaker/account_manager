@@ -7,30 +7,8 @@ from urllib.parse import urlparse, quote
 
 from O365.utils import ApiComponent, Pagination
 
-# class Users(ApiComponent):
-#     _endpoints = {
-#         # endpoints for user controls
-#         'users': '/users'
-#     }
-
-#     def __init__(self, *,parent=None, con=None, **kwargs):
-
-#         if parent and con:
-#             raise ValueError('Need a parent or a connection but not both')
-#         self.con = parent.con if parent else con
-#         self.parent = parent if isinstance(parent, User) else None
-
-#         super().__init(
-#             protocol = kwargs.get('protocol')
-#         ) 
-
-#         cloud_data = kwargs.get(self._cloud_data_key, {})
-
-#         def get_users(self):
-
-
-class User(ApiComponent):
-    """ A user representation. """
+class Users(ApiComponent):
+    """ A collection of users """
 
     _endpoints = {
         # endpoints for user controls
@@ -110,9 +88,9 @@ class User(ApiComponent):
         for u in data:
             user = User()
             user.user_id = u['id']
-            user.account_enabled = u['accountEnabled']
-            user.assigned_licenses = u['assignedLicenses']
-            user.department = u['department']
+            #user.account_enabled = u['accountEnabled']
+            #user.assigned_licenses = u['assignedLicenses']
+            #user.department = u['department']
             user.job_title = u['jobTitle']
             user.display_name = u['displayName']
             user.first_name = u['givenName']
@@ -121,21 +99,32 @@ class User(ApiComponent):
 
             users.append(user)
 
+        user_names = []
+        for user in users:
+            user_names.append(user.display_name)
+         
 
+        return user_names
 
-
-
-        return users
-
-    def get_user(self):
+    def get_user(self, user_id=None):
         """ Get single user
 
         :return: Single User
         :rtype: User
         """
+        if not user_id:
+            raise ValueError('This requires a UserID')
 
-        url = self.build_url(self._endpoints.get('user'))
-        pass
+        url = self.build_url(self._endpoints.get('user')).format(id=user_id)
+        
+        response = self.con.get(url)
+
+        if not response:
+            return None
+        
+        data = response.json()
+
+        return data
 
     def new_user(self, first_name, last_name, account_enabled=False):
         """ Creates a user
@@ -192,7 +181,39 @@ class User(ApiComponent):
                 }
                 data.append(att_data)
         return data
+class User:
+    """ A User """
 
+    def __init__(self, account_enabled=False, assigned_licenses=None,department=None, 
+                job_title=None, display_name=None, first_name=None, last_name=None,
+                email_address=None):
+        """ Create a user
+        
+        :param str user_id: User ID
+        :param bool account_enabled: Account status
+        :param str assigned_licenses: Assigned licenses
+        :param str department: Department user works in
+        :param str job_title: Job title of user
+        :param str display_name: Full name of user
+        :param str first_name: First name of user
+        :param str last_name: Last name of user
+        :param str email_address: Email address of user
+        :param str user_type: User account type
+        :param str user_principal_name: User log in username
+        """
+
+        
+        self.user_id = None
+        self.account_enabled = account_enabled
+        self.assigned_licenses = assigned_licenses
+        self.department = department
+        self.job_title = job_title
+        self.display_name = display_name
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email_address = email_address
+        self.user_type = 'User'
+        self.user_principal_name = self.email_address
 
 #add user 
 #block user login
