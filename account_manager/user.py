@@ -1,10 +1,33 @@
 import logging
 import warnings
+import json
 from pathlib import Path
 from time import sleep
 from urllib.parse import urlparse, quote
 
 from O365.utils import ApiComponent, Pagination
+
+# class Users(ApiComponent):
+#     _endpoints = {
+#         # endpoints for user controls
+#         'users': '/users'
+#     }
+
+#     def __init__(self, *,parent=None, con=None, **kwargs):
+
+#         if parent and con:
+#             raise ValueError('Need a parent or a connection but not both')
+#         self.con = parent.con if parent else con
+#         self.parent = parent if isinstance(parent, User) else None
+
+#         super().__init(
+#             protocol = kwargs.get('protocol')
+#         ) 
+
+#         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+#         def get_users(self):
+
 
 class User(ApiComponent):
     """ A user representation. """
@@ -12,7 +35,7 @@ class User(ApiComponent):
     _endpoints = {
         # endpoints for user controls
         'user': '/users/{id}',
-        'create_user': '/users', 
+        'users': '/users', 
     }
 
     def __init__(self, *, parent=None, con=None, **kwargs):
@@ -41,7 +64,7 @@ class User(ApiComponent):
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
-        self.name = cloud_data.get(self._cc('name'), '')
+        # self.name = cloud_data.get(self._cc('name'), '') there is no name
         self.user_id = cloud_data.get(self._cc('id'), None)
         self.account_enabled = cloud_data.get(self._cc('accountEnabled'), False)
         self.assigned_licenses = cloud_data.get(self._cc('assignedLicenses'))
@@ -62,6 +85,45 @@ class User(ApiComponent):
     
     def __eq__(self, other):
         return self.user_id == other.user_id
+    
+    def get_users(self):
+        """ Get list of all users
+
+        :return: List of all users
+        :rtype: JSON
+        """
+
+        url = self.build_url(self._endpoints.get('users'))
+
+        response = self.con.get(url)
+
+        #users = parse
+
+        if not response:
+            return None
+
+        data = response.json()['value']
+
+        for u in data:
+            user = User()
+            user.user_id = u['id']
+            user.name = u
+
+
+
+
+
+        return data
+
+    def get_user(self):
+        """ Get single user
+
+        :return: Single User
+        :rtype: User
+        """
+
+        url = self.build_url(self._endpoints.get('user'))
+        pass
 
     def new_user(self, first_name, last_name, account_enabled=False):
         """ Creates a user
@@ -77,7 +139,7 @@ class User(ApiComponent):
         display_name = first_name + ' ' + last_name
         mail_nickname = first_name[0].lower() + last_name.lower() + "@decisionpointcenter.com"
         user_principal_name = mail_nickname
-
+        
         response = self.con.post(url, data={self._cc('givenName'): first_name, self._cc('surname'): last_name,
                                             self._cc('displayName'): display_name, self._cc('mailNickname'): mail_nickname,
                                             self._cc('userPrincipalName'): user_principal_name, self._cc('accountEnabled'): account_enabled
@@ -99,6 +161,25 @@ class User(ApiComponent):
             return False
 
         url = self.build_url(self._endpoints.get('user'))
+
+
+    # This needs to be made to convert data to JSON to send to Microsoft for this class 
+    def to_api_data(self):
+        """ Returns a dict to communicate with the server
+        :rtype: dict
+        """
+        data = []
+        for attendee in self.__attendees:
+            if attendee.address:
+                att_data = {
+                    self._cc('emailAddress'): {
+                        self._cc('address'): attendee.address,
+                        self._cc('name'): attendee.name
+                    },
+                    self._cc('type'): self._cc(attendee.attendee_type.value)
+                }
+                data.append(att_data)
+        return data
 
 
 #add user 
