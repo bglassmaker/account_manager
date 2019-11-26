@@ -103,17 +103,29 @@ class User(ApiComponent):
             return None
 
         data = response.json()['value']
+        users = []
 
+        # maybe the actual response without json just drops in to user? for d in data: user=User(response) users.append(user)? that be cool... thats not
+        # cause you cant itterate over that object. Look into how cloud_data works. Else the below will work too.
         for u in data:
             user = User()
             user.user_id = u['id']
-            user.name = u
+            user.account_enabled = u['accountEnabled']
+            user.assigned_licenses = u['assignedLicenses']
+            user.department = u['department']
+            user.job_title = u['jobTitle']
+            user.display_name = u['displayName']
+            user.first_name = u['givenName']
+            user.last_name = u['surname']
+            # user.email_address = u
+
+            users.append(user)
 
 
 
 
 
-        return data
+        return users
 
     def get_user(self):
         """ Get single user
