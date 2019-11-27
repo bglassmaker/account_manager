@@ -5,7 +5,7 @@ from pathlib import Path
 from time import sleep
 from urllib.parse import urlparse, quote
 
-from O365.utils import ApiComponent, Pagination
+from O365.utils import ApiComponent
 
 class Users(ApiComponent):
     """ A collection of users """
@@ -63,7 +63,7 @@ class Users(ApiComponent):
     
     def __eq__(self, other):
         return self.user_id == other.user_id
-    
+    # this fucntion is not needed, out of the scope of what this program was intended for, for now. 
     def get_users(self):
         """ Get list of all users
 
@@ -106,16 +106,16 @@ class Users(ApiComponent):
 
         return user_names
 
-    def get_user(self, user_id=None):
+    def get_user(self, user_principal_name=None):
         """ Get single user
 
         :return: Single User
         :rtype: User
         """
-        if not user_id:
+        if not user_principal_name:
             raise ValueError('This requires a UserID')
 
-        url = self.build_url(self._endpoints.get('user')).format(id=user_id)
+        url = self.build_url(self._endpoints.get('user')).format(id=user_principal_name)
         
         response = self.con.get(url)
 
@@ -140,31 +140,39 @@ class Users(ApiComponent):
         display_name = first_name + ' ' + last_name
         mail_nickname = first_name[0].lower() + last_name.lower() + "@decisionpointcenter.com"
         user_principal_name = mail_nickname
+
+        data={self._cc('givenName'): first_name, self._cc('surname'): last_name,
+            self._cc('displayName'): display_name, self._cc('mailNickname'): mail_nickname,
+            self._cc('userPrincipalName'): user_principal_name, self._cc('accountEnabled'): account_enabled}
         
-        response = self.con.post(url, data={self._cc('givenName'): first_name, self._cc('surname'): last_name,
-                                            self._cc('displayName'): display_name, self._cc('mailNickname'): mail_nickname,
-                                            self._cc('userPrincipalName'): user_principal_name, self._cc('accountEnabled'): account_enabled
-        })
+        response = self.con.post(url, data)
 
         if not response:
             return None
         
-        data = response.json()
+        return = response.json()
 
-    def update(self):
-        """ Updates this user. 
+    def update_user_account_status(self, username, account_enabled):
+        if not username:
+            raise ValueError("Please provide a valid username")
+        if not account_enabled:
+            raise ValueError("Please provide a valid account status")
 
-        :return: Success/Failure
-        :rtype: bool
-        """
+        data = {
+            self._cc('accountEnabled'): account_enabled
+        }
 
-        if not self.user_id:
-            return False
+        url = self.build_url(self._endpoints.get('users')).format('username')
+        response = self.con.post(url, data)
 
-        url = self.build_url(self._endpoints.get('user'))
+        if not response:
+            return None
+        
+        return response.json()
 
 
-    # This needs to be made to convert data to JSON to send to Microsoft for this class 
+
+    # Example on how to build data for O365 module 
     def to_api_data(self):
         """ Returns a dict to communicate with the server
         :rtype: dict

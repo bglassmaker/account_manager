@@ -1,7 +1,7 @@
 import os
 
 from O365 import Account
-from account_manager.user import Users
+from account_manager.office365 import Users
 from flask import Flask, escape, request, render_template
 
 
@@ -19,16 +19,16 @@ account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id
 if account.authenticate():
     print('Authenticated')
 
-user_list = Users(parent=account).get_users()
-print(str(user_list))
+#user_list = Users(parent=account).get_users()
+#print(str(user_list))
 
-user_id = 'e04f3e08-7766-425f-8229-c295a80c6809'
-
-single_user = Users(parent=account).get_user(user_id)
+#user_id = 'ca2b77c6-0f0f-4f99-80f1-deea945b4b03'
+username = 'testuser@decisionpointcenter.com'
+single_user = Users(parent=account).get_user(username)
 print(single_user)
 
-app = Flask(__name__)
+#app = Flask(__name__)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+#@app.route('/')
+#def index():
+#    return render_template('index.html')
