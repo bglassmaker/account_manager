@@ -150,7 +150,7 @@ class Users(ApiComponent):
         if not response:
             return None
         
-        return = response.json()
+        return response.json()
 
     def update_user_account_status(self, username, account_enabled):
         if not username:
@@ -228,3 +228,6 @@ class User:
 #create user backup data through content search
 #download backup data through export of content search (don't think this is possible)
 
+
+# change the new user / edit user to modify a user object based off the user class then pass that object in 
+# to build the data var from.
