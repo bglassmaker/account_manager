@@ -4,10 +4,15 @@ import string
 
 from ldap3 import Server, Connection, All, NTLM, ServerPool
 
-server1 = Server("192.168.0.13")
-server2 = Server("192.168.0.14")
-server_pool = ServerPool([server1,server2], pool_stratagy=FIRST, active=True)
+#server1 = Server("192.168.0.13")
+#server2 = Server("192.168.0.14")
+#server_pool = ServerPool([server1,server2], pool_stratagy=FIRST, active=True)
 
+#test domain settings
+server1 = Server(192.168.56.10)
+server_pool=([server1], pool_stratagy=FIRST, active=True)
+
+# Need to remember to make a service account for this to avoid expiring passwords
 ad_user = os.environ('ADUSER')
 ad_password = os.environ('ADPASSWORD')
 
