@@ -9,7 +9,7 @@ from ldap3 import Server, Connection, ALL, NTLM, ServerPool
 #server_pool = ServerPool([server1,server2], pool_stratagy=FIRST, active=True)
 
 #test domain settings
-server_pool= Server('192.168.56.10', use_ssl=True)
+server_pool= Server('testdomain.local') #use_ssl=True
 
 # Need to remember to make a service account for this to avoid expiring passwords
 # ad_user = os.environ['ADUSER']
@@ -31,18 +31,12 @@ class User:
     """ A User
     """
 
-    def __init__(self, firstname, lastname, password):
+    def __init__(self, firstname:str, lastname:str, password:str):
         self.firstname = firstname
         self.lastname = lastname
         self.fullname = firstname + " " + lastname
         self.username = firstname[0] + lastname
         self.password = password
-    #also probably need to remove self
-    
-
-    def get_user(self, username):
-        # maybe reference how to get users with a web app? might not need a class method, maybe another static since
-        pass
 
     def unlock_user(self):
         ad_user = get_user(self.username)
@@ -54,14 +48,18 @@ class User:
         c.extend.microsoft.modify_password(ad_user, password)
         return password
     
-    def disable_user(self):
-        query = "ou=Disabled Users," + base_ou
+    def disable_user(self, username:str, location:str):
+        disabled_path = "ou=Disabled Users," + base_ou
+        domain_path = User.set_location(location) + base_ou
+        user_dn = "cn={}".format(username) + domain_path
         #disable user
+        c.modify(user_dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
         #move user to disabled
-        pass
+        c.modify_dn(user_dn, 'cn={}'.format(username), new_superior=disabled_path)
+        return print(c.result)
     
     @staticmethod
-    def set_location(location):
+    def set_location(location:str):
         domain_path = ''
         if location=="Campbell":
             domain_path = campbell_ou + base_ou
@@ -76,15 +74,13 @@ class User:
             print(domain_path)
             return domain_path
             
- 
-
     @staticmethod
-    def random_password(length):
+    def random_password(length:int):
         letters_and_digits = string.ascii_letters + string.digits
         return ''.join(random.choice(letters_and_digits) for i in range(length))
     
     @staticmethod
-    def new_user(location, firstname, lastname):
+    def new_user(location:str, firstname:str, lastname:str):
         domain_path = User.set_location(location)
         password = User.random_password(8)
         
@@ -102,8 +98,14 @@ class User:
             #c.add('cn={},'.format(user['username']) + domain_path, 'user', {'sAMAccountName': 'username', 'userPrincipalName': 'username', 'givenName': 'firstname', 'sn': 'lastname'})
             c.extend.microsoft.modify_password(user_dn, password)
             c.modify(user_dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
-            print(c.result)
             c.unbind()
+            return print(c.result)
             
-#        print(user)
         return
+    
+    @staticmethod
+    def set_user(username:str):
+        user = User()
+        user.username = username
+        # maybe reference how to get users with a web app? might not need a class method, maybe another static since
+        pass
