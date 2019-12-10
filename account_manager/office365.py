@@ -1,3 +1,4 @@
+import os
 import logging
 import warnings
 import json
@@ -6,6 +7,17 @@ from time import sleep
 from urllib.parse import urlparse, quote
 
 from O365.utils import ApiComponent
+
+api_id = os.environ.get('APPID')
+client_secret = os.environ.get('CLIENT_SECRET')
+tenant_id = os.environ.get('AZURE_TENANT_ID')
+
+credentials = (api_id, client_secret)
+
+
+# maybe switch to user authentication later?
+
+account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id)
 
 class Users(ApiComponent):
     """ A collection of users """

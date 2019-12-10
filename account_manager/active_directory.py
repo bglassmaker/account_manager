@@ -12,10 +12,10 @@ from ldap3 import Server, Connection, ALL, NTLM, ServerPool
 server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
 
 # Need to remember to make a service account for this to avoid expiring passwords
-# ad_user = os.environ['ADUSER']
-ad_user = os.environ['ADUSERTEST']
-# ad_password = os.environ['ADPASSWORD']
-ad_password = os.environ['ADPASSWORDTEST']
+# ad_user = os.environ.get('ADUSER')
+ad_user = os.environ.get('ADUSERTEST')
+# ad_password = os.environ.get('ADPASSWORD')
+ad_password = os.environ.get('ADPASSWORDTEST')
 
 #base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
 base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
