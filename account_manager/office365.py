@@ -7,6 +7,7 @@ from time import sleep
 from urllib.parse import urlparse, quote
 
 from O365.utils import ApiComponent
+from O365 import Account
 
 api_id = os.environ.get('APPID')
 client_secret = os.environ.get('CLIENT_SECRET')

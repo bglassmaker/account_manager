@@ -25,8 +25,6 @@ campbell_ou = "ou=Users,ou=Office1,"
 whipple_ou = "ou=Users,ou=Office2,"
 brush_ou = "ou=Domain Users,ou=Brush Office,"
 
-c = Connection(server_pool, user=ad_user, password=ad_password, authentication=NTLM, auto_bind=True)
-
 class User:
     """ A User
     """
@@ -39,58 +37,53 @@ class User:
         self.user_dn = user_dn      
 
     def reset_password(self) -> list:
+        c = connect_to_ad(ad_user,ad_password)
         password = random_password(8)
         # add checking to make sure it worked, try?
-        c.bind()
-        check_bind()
         c.extend.microsoft.modify_password(self.user_dn, password)
-        check_result()
+        check_result(c.result)
         return [c.result, password]
     
     def unlock_user(self):
-        c.bind()
-        check_bind()
+        c = connect_to_ad(ad_user,ad_password)
         c.extend.microsoft.unlock_account(self.user_dn)
-        check_result()
+        check_result(c.result)
         return c.result
     
     def disable_user(self):
+        c = connect_to_ad(ad_user,ad_password)
         disabled_path = "ou=Disabled Users," + base_ou
         #disable user
-        c.bind()
-        check_bind()
         c.modify(self.user_dn, {'userAccountControl': [('MODIFY_REPLACE', 2)]})
         #move user to disabled
         c.modify_dn(self.user_dn, new_superior=disabled_path)
-        check_result() 
+        check_result(c.result) 
         return c.result
             
     def create_ad_user(self, location:str):
+        c = connect_to_ad(ad_user,ad_password)
         domain_path = set_location(location)
         password = random_password(8)
         self.user_dn = 'cn={},'.format(self.username) + domain_path
               
-        c.bind()
-        check_bind()
         c.add(self.user_dn, 'user', {'sAMAccountName': self.username, 'userPrincipalName': self.username + '@testdomain.local', 'givenName': self.firstname, 'sn': self.lastname})
         c.extend.microsoft.modify_password(self.user_dn, password)
         c.modify(self.user_dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
-        check_result()    
+        check_result(c.result)    
         return [c.result, password]
 
-def get_user(username:str) -> list:
-    c.bind()
+def get_user(username:str) -> User:
+    c = connect_to_ad(ad_user,ad_password)
     c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
-    response = c.response[0]
-    check_bind()
+    response = c.response[0]   
     user = User(
         firstname = response['attributes']['givenName'],
         lastname = response['attributes']['sn'],
         user_dn = response['dn']
     )
 
-    check_result()
-    return [c.result, user]
+    check_result(c.result)
+    return user
     
 def random_password(length:int) -> str:
     letters_and_digits = string.ascii_letters + string.digits
@@ -109,10 +102,9 @@ def set_location(location:str) -> str:
 
     return domain_path
 
-def check_bind():
-    if not c.bind():
-        exit(c.result)
+def check_result(result):
+    if not result['result'] == 0:
+        exit(result)   
 
-def check_result():
-    if not c.result['result'] == 0:
-        exit(c.result)    
+def connect_to_ad(dn_user, password):
+    return Connection(server_pool, user=dn_user, password=password, authentication=NTLM, auto_bind=True) 
