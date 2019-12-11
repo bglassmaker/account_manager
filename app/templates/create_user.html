@@ -20,8 +20,14 @@
             {% endfor %}
         </p>
         <p>
+            {{ form.username.label }}<br />
+            {{ form.username(size=32) }}
+            {% for error in form.username.errors %}
+            <span style="color: red;">[{{ error }}]
+            {% endfor %}
+        <p>
             {{ form.location.label }}<br />
-            {{ form.location(size=32) }}
+            {{ form.location }}
             {% for error in form.location.errors %}
             <span style="color: red;">[{{ error }}]
             {% endfor %}

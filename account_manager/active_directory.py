@@ -29,10 +29,10 @@ class User:
     """ A User
     """
 
-    def __init__(self, firstname:str, lastname:str, user_dn:str=None):
+    def __init__(self, firstname:str, lastname:str, username:str, user_dn:str=None):
         self.firstname = firstname
         self.lastname = lastname
-        self.username = (firstname[0] + lastname).lower()
+        self.username = username.lower()
         self.fullname = firstname + ' ' + lastname
         self.user_dn = user_dn      
 
@@ -62,6 +62,8 @@ class User:
             
     def create_ad_user(self, location:str):
         c = connect_to_ad(ad_user,ad_password)
+        if check_if_username_exists(self.username):
+            raise ValueError("Username already exists")
         domain_path = set_location(location)
         password = random_password(8)
         self.user_dn = 'cn={},'.format(self.username) + domain_path
@@ -84,6 +86,10 @@ def get_user(username:str) -> User:
 
     check_result(c.result)
     return user
+
+def check_if_username_exists(username:str) -> bool:
+    c = connect_to_ad(ad_user,ad_password)
+    return c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(username))
     
 def random_password(length:int) -> str:
     letters_and_digits = string.ascii_letters + string.digits
