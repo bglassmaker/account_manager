@@ -7,6 +7,8 @@ class CreateUserForm(FlaskForm):
     firstname = StringField('Firstname')
     lastname = StringField('Lastname')
     username = StringField('Username')
+    department = StringField('Department')
+    job_title = StringField('Job Title')
     location = SelectField('Locations', choices=locations)
     password = StringField('Password')
     submit = SubmitField('Create User')

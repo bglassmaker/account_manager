@@ -1,7 +1,4 @@
 import os
-import random
-import string
-
 from ldap3 import Server, Connection, ALL, NTLM, ServerPool
 
 #server1 = Server("192.168.0.13")
@@ -11,7 +8,7 @@ from ldap3 import Server, Connection, ALL, NTLM, ServerPool
 #test domain settings
 server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
 
-# Need to remember to make a service account for this to avoid expiring passwords
+# Need to change this to use the LDAP3 Login through flask and assign roles to people who should use it.
 # ad_user = os.environ.get('ADUSER')
 ad_user = os.environ.get('ADUSERTEST')
 # ad_password = os.environ.get('ADPASSWORD')
@@ -19,98 +16,72 @@ ad_password = os.environ.get('ADPASSWORDTEST')
 
 #base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
 base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
-#campbell_ou = "ou=Domain Users,ou=Campbell Office,"
-campbell_ou = "ou=Users,ou=Office1,"
-#whipple_ou = "ou=Domain Users,ou=Whipple Office,"
-whipple_ou = "ou=Users,ou=Office2,"
-brush_ou = "ou=Domain Users,ou=Brush Office,"
 
-class User:
-    """ A User
+class ADUser:
+    """ An Active Directory User
     """
 
-    def __init__(self, firstname:str, lastname:str, username:str, user_dn:str=None):
-        self.firstname = firstname
-        self.lastname = lastname
-        self.username = username.lower()
-        self.fullname = firstname + ' ' + lastname
-        self.user_dn = user_dn      
-
-    def reset_password(self) -> list:
+    def reset_ad_password(self) -> list:
         c = connect_to_ad(ad_user,ad_password)
-        password = random_password(8)
+        self._random_password(8)
         # add checking to make sure it worked, try?
-        c.extend.microsoft.modify_password(self.user_dn, password)
+        c.extend.microsoft.modify_password(self.dn, self.random_password)
         check_result(c.result)
-        return [c.result, password]
+        return [c.result, self.random_password]
     
-    def unlock_user(self):
+    def unlock_ad_user(self):
         c = connect_to_ad(ad_user,ad_password)
-        c.extend.microsoft.unlock_account(self.user_dn)
+        c.extend.microsoft.unlock_account(self.dn)
         check_result(c.result)
         return c.result
     
-    def disable_user(self):
+    def disable_ad_user(self):
         c = connect_to_ad(ad_user,ad_password)
-        disabled_path = "ou=Disabled Users," + base_ou
+        disabled_path = "ou=Disabled Users,{}".format(base_ou)
         #disable user
-        c.modify(self.user_dn, {'userAccountControl': [('MODIFY_REPLACE', 2)]})
+        c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 2)]})
         #move user to disabled
-        c.modify_dn(self.user_dn, new_superior=disabled_path)
+        c.modify_dn(self.dn, new_superior=disabled_path)
         check_result(c.result) 
         return c.result
             
     def create_ad_user(self, location:str):
         c = connect_to_ad(ad_user,ad_password)
-        if check_if_username_exists(self.username):
+        if self.check_if_username_exists():
             raise ValueError("Username already exists")
-        domain_path = set_location(location)
-        password = random_password(8)
-        self.user_dn = 'cn={},'.format(self.username) + domain_path
-              
-        c.add(self.user_dn, 'user', {'sAMAccountName': self.username, 'userPrincipalName': self.username + '@testdomain.local', 'givenName': self.firstname, 'sn': self.lastname})
-        c.extend.microsoft.modify_password(self.user_dn, password)
-        c.modify(self.user_dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
+        self.domain_path = self._set_domain_path(location)
+        self.dn = 'cn={},{}'.format(self.username, self.domain_path)
+        password = self._random_password(8)
+
+        c.add(self.dn, ['person', 'user'], {'sAMAccountName': self.username, 'userPrincipalName': self.username + '@testdomain.local', 'givenName': self.firstname, 'sn': self.lastname})
+        c.extend.microsoft.modify_password(self.dn, password)
+        c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
         check_result(c.result)    
         return [c.result, password]
+    
+    def _set_domain_path(self,location:str):
+        self.domain_path = "ou=Domain Users,ou={} Office,{}".format(location, base_ou)
 
-def get_user(username:str) -> User:
+    def check_if_username_exists(self) -> bool:
+        c = connect_to_ad(ad_user,ad_password)
+        return c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(self.username))
+
+def get_ad_user(username:str):
     c = connect_to_ad(ad_user,ad_password)
     c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
     response = c.response[0]   
-    user = User(
+    user = ADUser(
         firstname = response['attributes']['givenName'],
         lastname = response['attributes']['sn'],
-        user_dn = response['dn']
+        dn = response['dn']
     )
 
     check_result(c.result)
     return user
-
-def check_if_username_exists(username:str) -> bool:
-    c = connect_to_ad(ad_user,ad_password)
-    return c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(username))
-    
-def random_password(length:int) -> str:
-    letters_and_digits = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters_and_digits) for i in range(length))
-
-def set_location(location:str) -> str:
-    domain_path = ''
-    if location=="Campbell":
-        domain_path = campbell_ou + base_ou
-    elif location=="Brush":
-        domain_path = brush_ou + base_ou
-    elif location=="Whipple":
-        domain_path = whipple_ou + base_ou
-    else:
-        raise ValueError("Please enter a location")
-
-    return domain_path
 
 def check_result(result):
     if not result['result'] == 0:
         exit(result)   
 
 def connect_to_ad(dn_user, password):
-    return Connection(server_pool, user=dn_user, password=password, authentication=NTLM, auto_bind=True) 
+    return Connection(server_pool, user=ad_user, password=password, authentication=NTLM, auto_bind=True) 

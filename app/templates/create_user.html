@@ -16,20 +16,35 @@
             {{ form.lastname.label }}<br />
             {{ form.lastname(size=32) }}
             {% for error in form.lastname.errors %}
-            <span style="color: red;">[{{ error }}]
+            <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>
             {{ form.username.label }}<br />
             {{ form.username(size=32) }}
             {% for error in form.username.errors %}
-            <span style="color: red;">[{{ error }}]
+            <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
+        </p>
+        <p>
+            {{ form.department.label }}<br />
+            {{ form.department(size=32) }}
+            {% for error in form.department.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.job_title.label }}<br />
+            {{ form.job_title(size=32) }}
+            {% for error in form.job_title.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
         <p>
             {{ form.location.label }}<br />
             {{ form.location }}
             {% for error in form.location.errors %}
-            <span style="color: red;">[{{ error }}]
+            <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
         <p>{{ form.submit() }}</p>
