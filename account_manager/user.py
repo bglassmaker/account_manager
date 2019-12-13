@@ -3,8 +3,9 @@ import string
 
 from account_manager.active_directory import ADUser
 from account_manager.office365 import O365User
+from account_manager.zencharts import ZenChartsUser
 
-class User(ADUser, O365User):
+class User(ADUser, O365User, ZenChartsUser):
     """ A User """
 
     def __init__(self, first_name:str, last_name:str, department:str, job_title:str, 

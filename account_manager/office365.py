@@ -78,7 +78,7 @@ class O365User(ApiComponent):
     # def __eq__(self, other):
     #     return self.user_id == other.user_id
 
-    def new_user(self, user):
+    def create_o365_user(self, user):
         """ Creates a user
 
         :return: a new User
@@ -108,7 +108,7 @@ class O365User(ApiComponent):
         
         return response.json()
 
-    def update_user_account_status(self, username, account_enabled):
+    def update_o65_account_status(self, username, account_enabled):
         if not username:
             raise ValueError("Please provide a valid username")
         if not account_enabled:
@@ -126,7 +126,7 @@ class O365User(ApiComponent):
         
         return response.json()
    
-    def get_user(self, user_principal_name=None):
+    def get_o365_user(self, user_principal_name=None):
         """ Get single user
 
         :return: Single User
