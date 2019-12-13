@@ -1,3 +1,3 @@
-class ZenChartsUser():
-    def create_zen_user(self):
-        pass
+
+def create_zen_user(self):
+    print('Create Zen User')
