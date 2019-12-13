@@ -3,35 +3,28 @@ import random
 import string
 from ldap3 import Server, ServerPool, Connection, ALL, NTLM
 from O365.utils import ApiComponent
-from O365 import Account, Connection
-
-from account_manager.office365 import O365User
+from O365 import Account
 
 #server1 = Server("192.168.0.13")
 #server2 = Server("192.168.0.14")
 #server_pool = ServerPool([server1,server2], pool_stratagy=FIRST, active=True)
-
 #test domain settings
 server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
-
 # Need to change this to use the LDAP3 Login through flask and assign roles to people who should use it.
 # ad_user = os.environ.get('ADUSER')
 ad_user = os.environ.get('ADUSERTEST')
 # ad_password = os.environ.get('ADPASSWORD')
 ad_password = os.environ.get('ADPASSWORDTEST')
-
 #base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
 base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
-
+# Office 365 Settings 
 api_id = os.environ.get('APPID')
 client_secret = os.environ.get('CLIENT_SECRET')
 tenant_id = os.environ.get('AZURE_TENANT_ID')
-
 credentials = (api_id, client_secret)
 
 # maybe switch to user authentication later?
 account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id)
-
 
 class User(ApiComponent):
     """ A User """
@@ -82,6 +75,9 @@ class User(ApiComponent):
         self.domain_path = ''
         self.dn = ''
     
+    '''
+    Active Directory
+    '''
     def _random_password(self, length:int) -> str:
         letters_and_digits = string.ascii_letters + string.digits
         self.random_password = ''.join(random.choice(letters_and_digits) for i in range(length))
@@ -134,7 +130,6 @@ class User(ApiComponent):
     '''
     Office 365
     '''
-    
     def create_o365_user(self, user):
         """ Creates a user
 
@@ -202,6 +197,12 @@ class User(ApiComponent):
         data = response.json()
 
         return data
+    
+    '''
+    ZenCharts
+    '''
+    def create_zen_user(self):
+        print('Create Zen User')
 
 def get_ad_user(username:str):
     c = connect_to_ad(ad_user,ad_password)

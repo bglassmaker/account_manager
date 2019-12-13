@@ -2,12 +2,11 @@ from flask import render_template, flash, redirect
 from app import app
 from app.forms import CreateUserForm
 from flask_ldap3_login.forms import LDAPLoginForm
+from flask_login import login_user
 
 from account_manager.user import User
 
 @app.route('/')
-
-@app.route('/index')
 def index():
     return render_template('index.html', title='Home')
 
