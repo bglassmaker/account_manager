@@ -1,7 +1,9 @@
 import os
 import random
 import string
-from ldap3 import Server, ServerPool, Connection, ALL, NTML
+from ldap3 import Server, ServerPool, Connection, ALL, NTLM
+from O365.utils import ApiComponent
+from O365 import Account, Connection
 
 from account_manager.office365 import O365User
 
@@ -21,11 +23,27 @@ ad_password = os.environ.get('ADPASSWORDTEST')
 #base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
 base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
 
-class User(O365User):
+api_id = os.environ.get('APPID')
+client_secret = os.environ.get('CLIENT_SECRET')
+tenant_id = os.environ.get('AZURE_TENANT_ID')
+
+credentials = (api_id, client_secret)
+
+# maybe switch to user authentication later?
+account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id)
+
+
+class User(ApiComponent):
     """ A User """
 
-    def __init__(self, first_name:str, last_name:str, department:str, job_title:str, 
-                dn:str=None, account_enabled:bool=False):
+    _endpoints = {
+        # endpoints for user controls
+        'user': '/users/{id}',
+        'users': '/users', 
+    }
+
+    def __init__(self, *, first_name:str, last_name:str, department:str, job_title:str, 
+                dn:str=None, account_enabled:bool=False, parent=None, con=None, **kwargs):
 
         """ Create a user
         
@@ -39,6 +57,18 @@ class User(O365User):
         :param str job_title: Job title of user
         :param str dn: User DN for AD
         """
+        if parent and con:
+            raise ValueError('Need a parent or a connection but not both')
+        self.con = parent.con if parent else con
+        self.parent = parent if isinstance(parent, User) else None
+
+        # Choose the main_resource passed in kwargs over parent main_resource
+        main_resource = kwargs.pop('main_resource', None) or (
+            getattr(parent, 'main_resource', None) if parent else None)
+        super().__init__(
+            protocol=parent.protocol if parent else kwargs.get('protocol'),
+            main_resource=main_resource
+        )
 
         self.first_name = first_name
         self.last_name = last_name
@@ -56,7 +86,7 @@ class User(O365User):
         letters_and_digits = string.ascii_letters + string.digits
         self.random_password = ''.join(random.choice(letters_and_digits) for i in range(length))
     
-        def reset_ad_password(self) -> list:
+    def reset_ad_password(self) -> list:
         c = connect_to_ad(ad_user,ad_password)
         self._random_password(8)
         # add checking to make sure it worked, try?
@@ -100,6 +130,78 @@ class User(O365User):
     def check_if_username_exists(self) -> bool:
         c = connect_to_ad(ad_user,ad_password)
         return c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(self.username))
+    
+    '''
+    Office 365
+    '''
+    
+    def create_o365_user(self, user):
+        """ Creates a user
+
+        :return: a new User
+        :rtype: User
+        """
+
+        url = self.build_url(self._endpoints.get('users'))
+        password = 'SDfedasd!'
+
+        data={
+            'givenName': user.first_name, 
+            'surname': user.last_name,
+            'displayName': user.full_name, 
+            'mailNickname': user.mail_nickname,
+            'userPrincipalName': user.email_address, 
+            'accountEnabled': user.account_enabled,
+            'passwordProfile': {
+                "forceChangePasswordNextSignIn": True,
+                "password": password
+            }
+        }
+    
+        response = self.con.post(url, data)
+
+        if not response:
+            return None
+        
+        return response.json()
+
+    def update_o65_account_status(self, username, account_enabled):
+        if not username:
+            raise ValueError("Please provide a valid username")
+        if not account_enabled:
+            raise ValueError("Please provide a valid account status")
+
+        data = {
+            self._cc('accountEnabled'): account_enabled
+        }
+
+        url = self.build_url(self._endpoints.get('users')).format('username')
+        response = self.con.post(url, data)
+
+        if not response:
+            return None
+        
+        return response.json()
+   
+    def get_o365_user(self, user_principal_name=None):
+        """ Get single user
+
+        :return: Single User
+        :rtype: User
+        """
+        if not user_principal_name:
+            raise ValueError('This requires a UserID')
+
+        url = self.build_url(self._endpoints.get('user')).format(id=user_principal_name)
+        
+        response = self.con.get(url)
+
+        if not response:
+            return None
+        
+        data = response.json()
+
+        return data
 
 def get_ad_user(username:str):
     c = connect_to_ad(ad_user,ad_password)
