@@ -178,7 +178,7 @@ class User(ApiComponent):
         
         return response.json()
    
-    def get_o365_user(self, user_principal_name=None):
+    def get_o365_user(self, user_principal_name):
         """ Get single user
 
         :return: Single User

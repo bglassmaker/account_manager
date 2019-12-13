@@ -4,8 +4,8 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, Radio
 class CreateUserForm(FlaskForm):
     locations = [('Whipple','Whipple'), ('Campbell','Campbell'), ('Brush','Brush')]
 
-    firstname = StringField('Firstname')
-    lastname = StringField('Lastname')
+    firstname = StringField('First Name')
+    lastname = StringField('Last Name')
     username = StringField('Username')
     department = StringField('Department')
     job_title = StringField('Job Title')
