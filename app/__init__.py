@@ -8,6 +8,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.config['DEBUG'] = True
 bootstrap = Bootstrap(app)
+login_manager = LoginManager(app)
+ldap_manager = LDAP3LoginManager(app)
 
 
 from app import routes

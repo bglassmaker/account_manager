@@ -9,5 +9,7 @@ class Config:
     LDAP_USER_DN = 'ou=Users'
     LDAP_GROUP_DN = 'ou=Security Groups'
     LDAP_USER_RDN_ATTR = 'cn'
-    LDAP_BIND_AUTHENTICATION_TYPE = 'NTLM'
+    #LDAP_BIND_AUTHENTICATION_TYPE = 'NTLM'
     LDAP_USER_LOGIN_ATTR = 'userPrincipalName'
+    LDAP_BIND_USER_DN = None
+    LDAP_BIND_USER_PASSWORD = None

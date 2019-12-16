@@ -7,6 +7,7 @@ from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
 from account_manager.employee import Employee
+from app.models import User
 
 # Office365 Log In Info
 # api_id = os.environ.get('APPID')
@@ -17,6 +18,9 @@ from account_manager.employee import Employee
 @app.route('/')
 @app.route('/index')
 def index():
+    if not current_user or current_user.is_anonymous:
+        return redirect(url_for('login'))
+
     return render_template('index.html', title='Home')
 
 @app.route('/create_user', methods=['GET', 'POST'])
@@ -39,4 +43,4 @@ def login():
         login_user(form.user)
         return redirect('/')
     
-    return render_template('login.html')
+    return render_template('login.html', form=form)
