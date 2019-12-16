@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, RadioField, SelectMultipleField, SelectField
 from wtforms.validators import ValidationError, DataRequired
 
-from account_manager.user import User
+from account_manager.employee import Employee
 
 class CreateUserForm(FlaskForm):
     locations = [('Whipple','Whipple Office'), ('Campbell','Campbell Office'), ('Brush','Brush Office')]
@@ -16,6 +16,6 @@ class CreateUserForm(FlaskForm):
     submit = SubmitField('Create User')
 
     def validate_username(self, username):
-        if User.check_if_username_exists(username):
+        if Employee.check_if_username_exists(username):
             raise ValidationError('Please use a different username.')
         

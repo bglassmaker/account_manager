@@ -7,8 +7,8 @@ from O365 import Account
 
 # maybe switch to user authentication later?
 
-class User(ApiComponent):
-    """ A User """
+class Employee(ApiComponent):
+    """ An Employee """
 
     _endpoints = {
         # endpoints for user controls
@@ -202,7 +202,7 @@ class User(ApiComponent):
         c = connect_to_ad(_ad_user,_ad_password)
         c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
         response = c.response[0]   
-        user = User(
+        user = Employee(
             firstname = response['attributes']['givenName'],
             lastname = response['attributes']['sn'],
             dn = response['dn']

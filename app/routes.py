@@ -6,7 +6,7 @@ from app.forms import CreateUserForm
 from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
-from account_manager.user import User
+from account_manager.employee import Employee
 
 # Office365 Log In Info
 # api_id = os.environ.get('APPID')
@@ -23,7 +23,7 @@ def index():
 def create_user():
     form = CreateUserForm()
     if form.validate_on_submit():
-        user = User(firstname=form.firstname.data, lastname=form.lastname.data, username=form.username.data,
+        user = Employee(firstname=form.firstname.data, lastname=form.lastname.data, username=form.username.data,
                     location=form.location.data, department=form.department.data, job_title=form.job_title.data)
         user.create_ad_user()
         user.create_o365_user()
