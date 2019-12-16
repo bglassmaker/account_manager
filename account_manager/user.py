@@ -5,26 +5,7 @@ from ldap3 import Server, ServerPool, Connection, ALL, NTLM
 from O365.utils import ApiComponent
 from O365 import Account
 
-#server1 = Server("192.168.0.13")
-#server2 = Server("192.168.0.14")
-#server_pool = ServerPool([server1,server2], pool_stratagy=FIRST, active=True)
-#test domain settings
-server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
-# Need to change this to use the LDAP3 Login through flask and assign roles to people who should use it.
-# ad_user = os.environ.get('ADUSER')
-ad_user = os.environ.get('ADUSERTEST')
-# ad_password = os.environ.get('ADPASSWORD')
-ad_password = os.environ.get('ADPASSWORDTEST')
-#base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
-base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
-# Office 365 Settings 
-api_id = os.environ.get('APPID')
-client_secret = os.environ.get('CLIENT_SECRET')
-tenant_id = os.environ.get('AZURE_TENANT_ID')
-credentials = (api_id, client_secret)
-
 # maybe switch to user authentication later?
-account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id)
 
 class User(ApiComponent):
     """ A User """
@@ -34,6 +15,26 @@ class User(ApiComponent):
         'user': '/users/{id}',
         'users': '/users', 
     }
+
+    #_server1 = Server("192.168.0.13")
+    #_server2 = Server("192.168.0.14")
+    #_server_pool = ServerPool([_server1,_server2], pool_stratagy=FIRST, active=True)
+    #test domain settings
+    _server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
+    # Need to change this to use the LDAP3 Login through flask and assign roles to people who should use it.
+    # ad_user = os.environ.get('ADUSER')
+    _ad_user = os.environ.get('ADUSERTEST')
+    # _ad_password = os.environ.get('ADPASSWORD')
+    _ad_password = os.environ.get('ADPASSWORDTEST')
+    #_base_ou = "ou=DecisionPointCenter,dc=DecisionPointCenter,dc=local"
+    _base_ou = "ou=TestDomain,dc=TestDomain,dc=local"
+    # Office 365 Settings 
+    _api_id = os.environ.get('APPID')
+    _client_secret = os.environ.get('CLIENT_SECRET')
+    _tenant_id = os.environ.get('AZURE_TENANT_ID')
+    _credentials = (_api_id, _client_secret)
+    
+    # Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
 
     def __init__(self, *, first_name:str, last_name:str, department:str, job_title:str, 
                 dn:str=None, account_enabled:bool=False, parent=None, con=None, **kwargs):
@@ -50,18 +51,18 @@ class User(ApiComponent):
         :param str job_title: Job title of user
         :param str dn: User DN for AD
         """
-        if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
-        self.con = parent.con if parent else con
-        self.parent = parent if isinstance(parent, User) else None
+        # if parent and con:
+        #     raise ValueError('Need a parent or a connection but not both')
+        # self.con = parent.con if parent else con
+        # self.parent = parent if isinstance(parent, User) else None
 
         # Choose the main_resource passed in kwargs over parent main_resource
-        main_resource = kwargs.pop('main_resource', None) or (
-            getattr(parent, 'main_resource', None) if parent else None)
-        super().__init__(
-            protocol=parent.protocol if parent else kwargs.get('protocol'),
-            main_resource=main_resource
-        )
+        # main_resource = kwargs.pop('main_resource', None) or (
+        #     getattr(parent, 'main_resource', None) if parent else None)
+        # super().__init__(
+        #     protocol=parent.protocol if parent else kwargs.get('protocol'),
+        #     main_resource=main_resource
+        # )
 
         self.first_name = first_name
         self.last_name = last_name
@@ -71,9 +72,7 @@ class User(ApiComponent):
         self.account_enabled = account_enabled
         self.department = department
         self.job_title = job_title
-        self.location = ''
-        self.domain_path = ''
-        self.dn = ''
+        self.dn = dn  
     
     '''
     Active Directory
@@ -83,7 +82,7 @@ class User(ApiComponent):
         self.random_password = ''.join(random.choice(letters_and_digits) for i in range(length))
     
     def reset_ad_password(self) -> list:
-        c = connect_to_ad(ad_user,ad_password)
+        c = connect_to_ad(_ad_user,_ad_password)
         self._random_password(8)
         # add checking to make sure it worked, try?
         c.extend.microsoft.modify_password(self.dn, self.random_password)
@@ -91,14 +90,14 @@ class User(ApiComponent):
         return [c.result, self.random_password]
     
     def unlock_ad_user(self):
-        c = connect_to_ad(ad_user,ad_password)
+        c = connect_to_ad(_ad_user,_ad_password)
         c.extend.microsoft.unlock_account(self.dn)
         check_result(c.result)
         return c.result
     
     def disable_ad_user(self):
-        c = connect_to_ad(ad_user,ad_password)
-        disabled_path = "ou=Disabled Users,{}".format(base_ou)
+        c = connect_to_ad(_ad_user,_ad_password)
+        disabled_path = "ou=Disabled Users,{}".format(_base_ou)
         #disable user
         c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 2)]})
         #move user to disabled
@@ -107,7 +106,7 @@ class User(ApiComponent):
         return c.result
             
     def create_ad_user(self, location:str):
-        c = connect_to_ad(ad_user,ad_password)
+        c = connect_to_ad(_ad_user,_ad_password)
         if self.check_if_username_exists():
             raise ValueError("Username already exists")
         self.domain_path = self._set_domain_path(location)
@@ -121,32 +120,34 @@ class User(ApiComponent):
         return [c.result, password]
     
     def _set_domain_path(self,location:str):
-        self.domain_path = "ou=Domain Users,ou={} Office,{}".format(location, base_ou)
+        self.domain_path = "ou=Domain Users,ou={} Office,{}".format(location, _base_ou)
 
     def check_if_username_exists(self) -> bool:
-        c = connect_to_ad(ad_user,ad_password)
-        return c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(self.username))
+        c = connect_to_ad(_ad_user,_ad_password)
+        return c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(self.username))
     
     '''
     Office 365
     '''
-    def create_o365_user(self, user):
+    def create_o365_user(self):
         """ Creates a user
 
         :return: a new User
         :rtype: User
         """
-
+        self.con = Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
         url = self.build_url(self._endpoints.get('users'))
-        password = 'SDfedasd!'
+        password = self.random_password(8)
 
         data={
-            'givenName': user.first_name, 
-            'surname': user.last_name,
-            'displayName': user.full_name, 
-            'mailNickname': user.mail_nickname,
-            'userPrincipalName': user.email_address, 
-            'accountEnabled': user.account_enabled,
+            'givenName': self.first_name, 
+            'surname': self.last_name,
+            'displayName': self.full_name, 
+            'mailNickname': self.username,
+            'userPrincipalName': self.email_address, 
+            'accountEnabled': self.account_enabled,
+            'jobTitle': self.job_title,
+            'department': self.department,
             'passwordProfile': {
                 "forceChangePasswordNextSignIn": True,
                 "password": password
@@ -198,28 +199,32 @@ class User(ApiComponent):
 
         return data
     
+    @staticmethod
+    def get_ad_user(username:str):
+        c = connect_to_ad(_ad_user,_ad_password)
+        c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
+        response = c.response[0]   
+        user = User(
+            firstname = response['attributes']['givenName'],
+            lastname = response['attributes']['sn'],
+            dn = response['dn']
+        )
+
+        check_result(c.result)
+        return user
+    
+    @staticmethod
+    def connect_to_ad(user, password):
+        return Connection(_server_pool, user=user, password=password, authentication=NTLM, auto_bind=True) 
+    
     '''
     ZenCharts
     '''
     def create_zen_user(self):
         print('Create Zen User')
 
-def get_ad_user(username:str):
-    c = connect_to_ad(ad_user,ad_password)
-    c.search(search_base=base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
-    response = c.response[0]   
-    user = User(
-        firstname = response['attributes']['givenName'],
-        lastname = response['attributes']['sn'],
-        dn = response['dn']
-    )
 
-    check_result(c.result)
-    return user
 
 def check_result(result):
     if not result['result'] == 0:
         exit(result)   
-
-def connect_to_ad(dn_user, password):
-    return Connection(server_pool, user=ad_user, password=password, authentication=NTLM, auto_bind=True) 

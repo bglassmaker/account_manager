@@ -1,3 +1,4 @@
+import os
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
 from app import app
@@ -6,6 +7,12 @@ from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
 from account_manager.user import User
+
+# Office365 Log In Info
+api_id = os.environ.get('APPID')
+client_secret = os.environ.get('CLIENT_SECRET')
+tenant_id = os.environ.get('AZURE_TENANT_ID')
+credentials = (api_id, client_secret)
 
 @app.route('/')
 @app.route('/index')
