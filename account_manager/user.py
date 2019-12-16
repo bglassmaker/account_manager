@@ -36,7 +36,7 @@ class User(ApiComponent):
     
     # Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
 
-    def __init__(self, *, first_name:str, last_name:str, department:str, job_title:str, 
+    def __init__(self, *, first_name:str, last_name:str, username:str, department:str, job_title:str, location:str, 
                 dn:str=None, account_enabled:bool=False, parent=None, con=None, **kwargs):
 
         """ Create a user
@@ -66,14 +66,15 @@ class User(ApiComponent):
 
         self.first_name = first_name
         self.last_name = last_name
-        self.full_name = '{} {}'.format(self.first_name, self.last_name)
-        self.username = (first_name[0] + last_name).lower()
-        self.email_address = '{}@decisionpointcenter.com'.format(self.username).lower()
-        self.account_enabled = account_enabled
+        self.username = username.lower()
+        self.location = location
         self.department = department
         self.job_title = job_title
         self.dn = dn  
-    
+        self.account_enabled = account_enabled
+        self.full_name = '{} {}'.format(self.first_name, self.last_name)
+        self.email_address = '{}@decisionpointcenter.com'.format(self.username)
+
     '''
     Active Directory
     '''
@@ -105,12 +106,12 @@ class User(ApiComponent):
         check_result(c.result) 
         return c.result
             
-    def create_ad_user(self, location:str):
+    def create_ad_user(self):
         c = connect_to_ad(_ad_user,_ad_password)
         if self.check_if_username_exists():
             raise ValueError("Username already exists")
-        self.domain_path = self._set_domain_path(location)
-        self.dn = 'cn={},{}'.format(self.username, self.domain_path)
+
+        self.dn = 'cn={},ou=Domain Users,ou={} Office,{}'.format(self.username, self.location, _base_ou)
         password = self._random_password(8)
 
         c.add(self.dn, ['person', 'user'], {'sAMAccountName': self.username, 'userPrincipalName': self.username + '@testdomain.local', 'givenName': self.firstname, 'sn': self.lastname})
@@ -118,9 +119,6 @@ class User(ApiComponent):
         c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
         check_result(c.result)    
         return [c.result, password]
-    
-    def _set_domain_path(self,location:str):
-        self.domain_path = "ou=Domain Users,ou={} Office,{}".format(location, _base_ou)
 
     def check_if_username_exists(self) -> bool:
         c = connect_to_ad(_ad_user,_ad_password)
