@@ -1,5 +1,8 @@
 from flask_login import UserMixin
 from app import login_manager, ldap_manager
+import logging
+
+logging.getLogger('flask_ldap3_login').setLevel(logging.DEBUG)
 
 users = {}
 
