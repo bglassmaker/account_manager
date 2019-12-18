@@ -124,6 +124,24 @@ class Employee(ApiComponent):
         c = connect_to_ad(_ad_user,_ad_password)
         return c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(self.username))
     
+    @staticmethod
+    def get_ad_user(username:str):
+        c = connect_to_ad(_ad_user,_ad_password)
+        c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
+        response = c.response[0]   
+        user = Employee(
+            firstname = response['attributes']['givenName'],
+            lastname = response['attributes']['sn'],
+            dn = response['dn']
+        )
+
+        check_result(c.result)
+        return user
+    
+    @staticmethod
+    def connect_to_ad(user, password):
+        return Connection(_server_pool, user=user, password=password, authentication=NTLM, auto_bind=True) 
+        
     '''
     Office 365
     '''
@@ -197,23 +215,7 @@ class Employee(ApiComponent):
 
         return data
     
-    @staticmethod
-    def get_ad_user(username:str):
-        c = connect_to_ad(_ad_user,_ad_password)
-        c.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(username), attributes=['givenName', 'sn'])
-        response = c.response[0]   
-        user = Employee(
-            firstname = response['attributes']['givenName'],
-            lastname = response['attributes']['sn'],
-            dn = response['dn']
-        )
-
-        check_result(c.result)
-        return user
     
-    @staticmethod
-    def connect_to_ad(user, password):
-        return Connection(_server_pool, user=user, password=password, authentication=NTLM, auto_bind=True) 
     
     '''
     ZenCharts
