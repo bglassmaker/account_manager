@@ -40,9 +40,9 @@ class Employee():
     # Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
 
     def __init__(
-        self, *, first_name:str, last_name:str, username:str=None, password:str=None, department:str=None, 
-        job_title:str=None, location:str=None, dn:str=None, account_enabled:bool=False, parent=None, con=None, 
-        userAccountControl:str=None, email_address:str=None, full_name:str=None, **kwargs):
+        self, first_name:str, last_name:str, full_name:str=None, username:str=None, password:str=None, department:str=None, 
+        job_title:str=None, location=None, dn:str=None, account_enabled:bool=False, parent=None, con=None, 
+        user_account_control=None, email_address:str=None, **kwargs):
 
         # if parent and con:
         #     raise ValueError('Need a parent or a connection but not both')
@@ -58,21 +58,20 @@ class Employee():
         # )
 
         if username:
-            username.lower()
+           username.lower()
 
         self.first_name = first_name
         self.last_name = last_name
-        self.username = username or first_name[0] + last_name.lower()
+        self.username = username or (first_name[0] + last_name).lower()
         self.location = location
         self.department = department
         self.job_title = job_title 
         self.account_enabled = account_enabled
-        self.user_account_control = userAccountControl
+        self.user_account_control = user_account_control
         self.full_name = full_name or '{} {}'.format(self.first_name, self.last_name)
         self.email_address = email_address or '{}@decisionpointcenter.com'.format(self.username)
-        self.dn = 'cn={},ou=Domain Users,ou={} Office,{}'.format(self.full_name, self.location, _base_ou)
+        self.dn = dn or 'cn={},ou=Domain Users,ou={} Office,{}'.format(self.full_name, self.location, _base_ou)
         self.password = password or self._random_password(8)
-        self.user_account_control = userAccountControl
 
     def _random_password(self, length:int) -> str:
         letters_and_digits = string.ascii_letters + string.digits
@@ -106,6 +105,7 @@ class Employee():
         c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=disabled_path)
         result = c.result
         c.unbind()
+        log.debug(result)
         return result
             
     def create_ad_account(self):
@@ -230,7 +230,7 @@ def get_all_accounts():
     c.search(
         search_base=_base_ou,
         search_filter='(&(objectclass=person)(|(userAccountControl=512)(userAccountControl=514)))',
-        attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn'])
+        attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn', 'sAMAccountName'])
     response = c.response
     c.unbind()
     employees = []
@@ -239,6 +239,7 @@ def get_all_accounts():
             first_name = r['attributes']['givenName'],
             last_name = r['attributes']['sn'],
             full_name = r['attributes']['cn'],
+            username = r['attributes']['sAMAccountName'],
             email_address = r['attributes']['mail'],
             dn = r['dn'],
             user_account_control = r['attributes']['userAccountControl']
@@ -253,7 +254,8 @@ def get_ad_user(username:str):
         search_base=_base_ou, 
         search_filter='(sAMAccountName={})'.format(username), 
         attributes=['givenName', 'sn', 'userAccountControl','mail','sAMAccountName'])
-    response = c.response[0]   
+    response = c.response[0]  
+    print(response) 
     employee = Employee(
         first_name = response['attributes']['givenName'],
         last_name = response['attributes']['sn'],
@@ -272,7 +274,6 @@ def check_result(result):
     if not result['result'] == 0:
         exit(result)   
 
-def suspend_accounts(username):
-    employee = get_ad_user(username)
+def suspend_accounts(employee):
     employee.suspend_ad_account()
     # employee.update_o365_account_status('False')

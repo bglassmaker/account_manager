@@ -42,10 +42,12 @@ def create_user():
         flash('It might have worked?')
     return render_template('create_user.html', title='Create User', form=form)
 
-@app.route('/suspend_user/<username>', methods=['GET', 'POST'])
+@app.route('/suspend_user', methods=['GET'])
 @login_required
-def suspend_user(username):
-    suspend_accounts(username)
+def suspend_user():
+    username = request.args.get('username')
+    user = get_ad_user(username)
+    suspend_accounts(user)
     return render_template('index.html')
 
 @app.route('/users', methods=['GET'])
