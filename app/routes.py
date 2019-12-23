@@ -3,7 +3,7 @@ import logging
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
 from app import app
-from app.forms import CreateUserForm, SuspendUserForm
+from app.forms import CreateUserForm
 from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
