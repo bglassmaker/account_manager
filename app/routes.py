@@ -7,7 +7,7 @@ from app.forms import CreateUserForm
 from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
-from account_manager.employee import Employee, get_all_accounts, get_ad_user, suspend_accounts
+from account_manager.employee import Employee, get_all_accounts, get_ad_user, suspend_accounts, enable_accounts
 from app.models import User
 
 logging.getLogger('account_manager').setLevel(logging.DEBUG)
@@ -49,7 +49,17 @@ def suspend_user():
     username = request.args.get('username')
     user = get_ad_user(username)
     suspend_accounts(user)
-    return render_template('index.html')
+    flash('User Disabled')
+    return redirect(url_for('users'))
+
+@app.route('/enable_user', methods=['GET'])
+@login_required
+def enable_user():
+    username = request.args.get('username')
+    user = get_ad_user(username)
+    enable_accounts(user)
+    flash('User Enabled')
+    return redirect(url_for('users'))
 
 @app.route('/users', methods=['GET'])
 @login_required

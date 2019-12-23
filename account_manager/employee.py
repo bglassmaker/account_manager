@@ -107,6 +107,19 @@ class Employee():
         c.unbind()
         log.debug(result)
         return result
+    
+    def enable_ad_account(self):
+        c = connect_to_ad(_ad_user,_ad_password)
+        c.bind()
+        enabled_path = "ou=Domain Users,ou={} Office,{}".format(self.location, _base_ou)
+        #Enable user
+        c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
+        #move user to DN
+        c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=enabled_path)
+        result = c.result
+        c.unbind()
+        log.debug(result)
+        return result
             
     def create_ad_account(self):
         c = connect_to_ad(_ad_user,_ad_password)
@@ -125,10 +138,16 @@ class Employee():
                 'userPrincipalName': self.username + '@testdomain.local', 
                 'givenName': self.first_name, 
                 'sn': self.last_name, 
-                'displayName': self.full_name
+                'displayName': self.full_name,
+                'mail': self.email_address,
+                'company': 'Decision Point Center',
+                'department': self.department,
+                'title': self.job_title,
+                'physicalDeliveryOfficeName': self.location        
             })
 
         c.extend.microsoft.modify_password(self.dn, self.password)
+        log.debug(c.result)
         c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
         if c.bind():
             c.unbind()
@@ -240,7 +259,7 @@ def get_ad_user(username:str):
     c.search(
         search_base=_base_ou, 
         search_filter='(sAMAccountName={})'.format(username), 
-        attributes=['givenName', 'sn', 'userAccountControl','mail','sAMAccountName'])
+        attributes=['givenName', 'sn', 'userAccountControl','mail','sAMAccountName','physicalDeliveryOfficeName'])
     response = c.response[0]  
     print(response) 
     employee = Employee(
@@ -249,7 +268,8 @@ def get_ad_user(username:str):
         dn = response['dn'],
         user_account_control = response['attributes']['userAccountControl'],
         email = response['attributes']['mail'],
-        username = response['attributes']['sAMAccountName']
+        username = response['attributes']['sAMAccountName'],
+        location = response['attributes']['physicalDeliveryOfficeName']
     )
     c.unbind()
     return employee
@@ -264,3 +284,8 @@ def check_result(result):
 def suspend_accounts(employee):
     employee.suspend_ad_account()
     # employee.update_o365_account_status('False')
+
+def enable_accounts(employee):
+    employee.enable_ad_account()
+    # employee.update_o365_account_status('True')
+    
