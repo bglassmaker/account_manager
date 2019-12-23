@@ -127,22 +127,9 @@ class Employee():
                 'sn': self.last_name, 
                 'displayName': self.full_name
             })
-        if c.result['result'] != 0:
-                print(c.result)
-        else:
-            log.debug('Added user {} sucessfully'.format(self.dn))
 
         c.extend.microsoft.modify_password(self.dn, self.password)
-        if c.result['result'] != 0:
-            print(c.result)
-        else:
-            log.debug('Modified password')
         c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
-        if c.result['result'] != 0:
-            print(c.result)
-        else:
-            log.debug('Activated {}'.format(self.dn))
-        #check_result(c.result)    
         if c.bind():
             c.unbind()
         return [c.result, self.password]

@@ -18,9 +18,3 @@ class CreateUserForm(FlaskForm):
     # def validate_username(self, username):
     #     if Employee.check_if_username_exists(username.data):
     #         raise ValidationError('Please use a different username.')
-
-class SuspendUserForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    status = StringField('Status', validators=[DataRequired()])
-    submit = SubmitField('Update User')
-        

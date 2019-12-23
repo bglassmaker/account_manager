@@ -39,7 +39,8 @@ def create_user():
             job_title=form.job_title.data)
         employee.create_ad_account()
         #employee.create_o365_user()
-        flash('It might have worked?')
+        flash('User Created')
+        return redirect(url_for('users'))
     return render_template('create_user.html', title='Create User', form=form)
 
 @app.route('/suspend_user', methods=['GET'])
@@ -56,12 +57,6 @@ def users():
     users = get_all_accounts()
 
     return render_template('users.html', users=users)
-
-@app.route('/user/<username>')
-@login_required
-def user(username):
-    user = get_ad_user(username)
-    return render_template('user.html', user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
