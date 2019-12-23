@@ -1,13 +1,17 @@
 import os
+import logging
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
 from app import app
-from app.forms import CreateUserForm
+from app.forms import CreateUserForm, SuspendUserForm
 from flask_ldap3_login.forms import LDAPLoginForm
 from flask_login import login_user, logout_user, login_required, current_user
 
-from account_manager.employee import Employee
+from account_manager.employee import Employee, get_all_accounts, get_ad_user, suspend_accounts
 from app.models import User
+
+logging.getLogger('account_manager').setLevel(logging.DEBUG)
+logging.getLogger('ldap3').setLevel(logging.DEBUG)
 
 # Office365 Log In Info
 # api_id = os.environ.get('APPID')
@@ -17,35 +21,60 @@ from app.models import User
 
 @app.route('/')
 @app.route('/index')
+@login_required
 def index():
-    if not current_user or current_user.is_anonymous:
-        return redirect(url_for('login'))
-
     return render_template('index.html', title='Home')
 
 @app.route('/create_user', methods=['GET', 'POST'])
+@login_required
 def create_user():
     form = CreateUserForm()
     if form.validate_on_submit():
-        user = Employee(firstname=form.firstname.data, lastname=form.lastname.data, username=form.username.data,
-                    location=form.location.data, department=form.department.data, job_title=form.job_title.data)
-        user.create_ad_user()
-        user.create_o365_user()
-        #user.create_zen_user()
+        employee = Employee(
+            first_name=form.firstname.data, 
+            last_name=form.lastname.data, 
+            username=form.username.data, 
+            location=form.location.data, 
+            department=form.department.data, 
+            job_title=form.job_title.data)
+        employee.create_ad_account()
+        #employee.create_o365_user()
         flash('It might have worked?')
     return render_template('create_user.html', title='Create User', form=form)
 
+@app.route('/suspend_user/<username>', methods=['GET', 'POST'])
+@login_required
+def suspend_user(username):
+    suspend_accounts(username)
+    return render_template('index.html')
+
+@app.route('/users', methods=['GET'])
+@login_required
+def users():
+    users = get_all_accounts()
+
+    return render_template('users.html', users=users)
+
+@app.route('/user/<username>')
+@login_required
+def user(username):
+    user = get_ad_user(username)
+    return render_template('user.html', user)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
     form = LDAPLoginForm()
 
-    if form.validate_on_submit():
+    if form.validate_on_submit():        
         login_user(form.user)
         return redirect('/')
     
     return render_template('login.html', form=form)
 
-@app.route('/lougout')
+@app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('index'))

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+
+{{ users }}
+
+<div class=row>
+{% for u in users %}
+    <div class=row>
+        <ul>
+            <li>Name: {{u.full_name}}</li>
+            <li>Account Status: {{u.user_account_control}}</li>
+            <li>DN: {{u.dn}}</li>
+            <li><a href="{{url_for('suspend_user', username=u.username)}}">Disable User</a>
+        </ul>
+    </div>
+{% endfor %}
+
+{% endblock %}
