@@ -27,8 +27,10 @@ def create_user():
 def suspend_user():
     username = request.args.get('username')
     user = get_ad_user(username)
-    suspend_accounts(user)
-    flash('User Disabled')
+    if suspend_accounts(user):
+        flash('User Disabled')
+        return redirect(url_for('employees.users'))
+    flash('User NOT Disabled', 'error')
     return redirect(url_for('employees.users'))
 
 @bp.route('/enable_user', methods=['GET'])
@@ -36,9 +38,34 @@ def suspend_user():
 def enable_user():
     username = request.args.get('username')
     user = get_ad_user(username)
-    enable_accounts(user)
-    flash('User Enabled')
+    if enable_accounts(user):
+        flash('User Enabled')
+        return redirect(url_for('employees.users'))
+    flash('User NOT enabled', 'error')
     return redirect(url_for('employees.users'))
+
+@bp.route('/password_reset', methods=['GET'])
+@login_required
+def password_reset():
+    username = request.args.get('username')
+    user = get_ad_user(username)
+    if user.reset_ad_password():
+        flash('Password Reset for {}: {}'.format(user.full_name, user.password), 'message')
+        return redirect(url_for('employees.users'))
+    flash('Password not reset', 'error')
+    return redirect(url_for('employees.users'))
+
+@bp.route('/unlock_account', methods=['GET'])
+@login_required
+def unlock_account():
+    username = request.args.get('username')
+    user = get_ad_user(username)
+    user.unlock_ad_account()
+    if user.unlock_ad_account():
+        flash('Account unlocked for {}'.format(user.full_name), 'message')
+        return redirect(url_for('employees.users'))
+    flash('Account not unlocked', 'error')
+    return redirect(url_for('employees.users'))  
 
 @bp.route('/users', methods=['GET'])
 @login_required

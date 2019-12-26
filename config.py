@@ -9,6 +9,7 @@ class Config:
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY') or 'you-will-never-guess'
     # LDAP Settings
     LDAP_HOST = 'testdomain.local'
+    # LDAP_ADD_SERVER = 'dpcdc2.local'
     LDAP_BASE_DN = 'dc=testdomain,dc=local'
     LDAP_USER_DN = 'ou=TestDomain'
     LDAP_GROUP_DN = 'ou=TestDomain'

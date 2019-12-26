@@ -8,8 +8,8 @@ from O365 import Account
 
 log = logging.getLogger(__name__)
 
-#_server1 = Server("192.168.0.13")
-#_server2 = Server("192.168.0.14")
+#_server1 = Server("192.168.0.13", use_ssl=True)
+#_server2 = Server("192.168.0.14", use_ssl=True)
 #_server_pool = ServerPool([_server1,_server2], pool_stratagy=FIRST, active=True)
 #test domain settings
 _server_pool= Server('testdomain.local', use_ssl=True) #use_ssl=True
@@ -25,7 +25,7 @@ _api_id = os.environ.get('APPID')
 _client_secret = os.environ.get('CLIENT_SECRET')
 _tenant_id = os.environ.get('AZURE_TENANT_ID')
 _credentials = (_api_id, _client_secret)
-
+_account = Account(_credentials, auth_flow_type='credentials', tenant_id=_tenant_id)
 # maybe switch to user authentication later?
 
 class Employee():
@@ -36,18 +36,16 @@ class Employee():
         'user': '/users/{id}',
         'users': '/users', 
     }
-    
-    # Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
 
     def __init__(
         self, first_name:str, last_name:str, full_name:str=None, username:str=None, password:str=None, department:str=None, 
-        job_title:str=None, location=None, dn:str=None, account_enabled:bool=False, parent=None, con=None, 
+        job_title:str=None, location=None, dn:str=None, account_enabled:bool=False, parent=None, con=_account, 
         user_account_control=None, email_address:str=None, **kwargs):
 
-        # if parent and con:
-        #     raise ValueError('Need a parent or a connection but not both')
-        # self.con = parent.con if parent else con
-        # self.parent = parent if isinstance(parent, Employee) else None
+        if parent and con:
+            raise ValueError('Need a parent or a connection but not both')
+        self.con = parent.con if parent else con
+        self.parent = parent if isinstance(parent, Employee) else None
 
         # # Choose the main_resource passed in kwargs over parent main_resource
         # main_resource = kwargs.pop('main_resource', None) or (
@@ -81,21 +79,33 @@ class Employee():
     Active Directory
     '''
     
-    def reset_ad_password(self) -> list:
+    def reset_ad_password(self) -> bool:
         c = connect_to_ad(_ad_user,_ad_password)
-        self._random_password(8)
-        # add checking to make sure it worked, try?
-        c.extend.microsoft.modify_password(self.dn, self.random_password)
-        check_result(c.result)
-        return [c.result, self.random_password]
+        c.bind()
+        self.password = self._random_password(8)
+
+        c.extend.microsoft.modify_password(self.dn, self.password)
+        c.modify(self.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
+        result = c.result
+        c.unbind()
+        if result['result'] > 0:
+            log.debug(result['description'])
+            return False
+        return True
     
-    def unlock_ad_account(self):
+    def unlock_ad_account(self) -> bool:
         c = connect_to_ad(_ad_user,_ad_password)
+        c.bind()
         c.extend.microsoft.unlock_account(self.dn)
-        check_result(c.result)
-        return c.result
+        result = c.result
+        c.unbind()
+        
+        if result['result'] > 0:
+            log.debug(result['description'])
+            return False
+        return True
     
-    def suspend_ad_account(self):
+    def suspend_ad_account(self) -> bool:
         c = connect_to_ad(_ad_user,_ad_password)
         c.bind()
         disabled_path = "ou=Disabled Users,{}".format(_base_ou)
@@ -105,10 +115,12 @@ class Employee():
         c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=disabled_path)
         result = c.result
         c.unbind()
-        log.debug(result)
-        return result
+        if result['result'] > 0:
+            log.debug(result)
+            return False
+        return True
     
-    def enable_ad_account(self):
+    def enable_ad_account(self) -> bool:
         c = connect_to_ad(_ad_user,_ad_password)
         c.bind()
         enabled_path = "ou=Domain Users,ou={} Office,{}".format(self.location, _base_ou)
@@ -118,8 +130,10 @@ class Employee():
         c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=enabled_path)
         result = c.result
         c.unbind()
-        log.debug(result)
-        return result
+        if result['result'] > 0:
+            log.debug(result)
+            return False
+        return True
             
     def create_ad_account(self):
         c = connect_to_ad(_ad_user,_ad_password)
@@ -148,7 +162,8 @@ class Employee():
 
         c.extend.microsoft.modify_password(self.dn, self.password)
         log.debug(c.result)
-        c.modify(self.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
+        c.modify(self.dn, {'userAccountControl': ('MODIFY_REPLACE', [512])})
+        c.modify(self.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
         if c.bind():
             c.unbind()
         return [c.result, self.password]
@@ -166,9 +181,7 @@ class Employee():
         :return: a new User
         :rtype: User
         """
-        self.con = Connection(_credentials, auth_flow_type='_credentials', tenant_id=_tenant_id)
         url = self.build_url(self._endpoints.get('users'))
-        password = self.random_password(8)
 
         data={
             'givenName': self.first_name, 
@@ -181,7 +194,7 @@ class Employee():
             'department': self.department,
             'passwordProfile': {
                 "forceChangePasswordNextSignIn": True,
-                "password": password
+                "password": self.password
             }
         }
     

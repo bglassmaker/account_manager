@@ -25,12 +25,14 @@
             <div class="col-4 text-center">
                 <span class="align-middle">
                 {% if u.user_account_control==512 %}
-                <a href="{{url_for('employees.suspend_user', username=u.username)}}" class="btn btn-danger">Disable User</a>
+                <a href="{{url_for('employees.suspend_user', username=u.username)}}" class="btn btn-danger">Disable User</a><br />
                 {% elif u.user_account_control==514 %}
-                <a href="{{url_for('employees.enable_user', username=u.username)}}" class="btn btn-success">Enable User</a>
+                <a href="{{url_for('employees.enable_user', username=u.username)}}" class="btn btn-success">Enable User</a><br />
                 {% else %}
                 {{u.user_account_control}}
                 {% endif %}
+                <a href="{{url_for('employees.password_reset', username=u.username)}}" class="btn btn-info">Reset Password</a><br />
+                <a href="{{url_for('employees.unlock_account', username=u.username)}}" class="btn btn-info">Unlock Account</a>
                 </span>
             </div>
         </ul>
