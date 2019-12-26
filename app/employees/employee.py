@@ -288,4 +288,3 @@ def suspend_accounts(employee):
 def enable_accounts(employee):
     employee.enable_ad_account()
     # employee.update_o365_account_status('True')
-    

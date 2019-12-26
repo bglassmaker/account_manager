@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-
 <div class="row">
+    <h1>User List</h1>
+</div>
 {% for u in users %}
     <div class="row" style="border:1px solid black; margin-bottom:10px; padding:10px">
-        <div class="col-md-9">
+        <div class="col-8">
             <ul>
                 <li>Name: {{u.full_name}}</li>
                 <li>Username: {{u.username}}</li>
@@ -21,17 +22,18 @@
                 <li>DN: {{u.dn}}</li>
             </ul>
         </div>
-            <div class="col-md-3 text-center">
+            <div class="col-4 text-center">
+                <span class="align-middle">
                 {% if u.user_account_control==512 %}
-                <a href="{{url_for('suspend_user', username=u.username)}}" class="btn btn-danger">Disable User</a>
+                <a href="{{url_for('employees.suspend_user', username=u.username)}}" class="btn btn-danger">Disable User</a>
                 {% elif u.user_account_control==514 %}
-                <a href="{{url_for('enable_user', username=u.username)}}" class="btn btn-success">Enable User</a>
+                <a href="{{url_for('employees.enable_user', username=u.username)}}" class="btn btn-success">Enable User</a>
                 {% else %}
                 {{u.user_account_control}}
-            {% endif %}
+                {% endif %}
+                </span>
             </div>
         </ul>
     </div>
 {% endfor %}
-
 {% endblock %}
