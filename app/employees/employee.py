@@ -27,6 +27,199 @@ _tenant_id = os.environ.get('AZURE_TENANT_ID')
 _credentials = (_api_id, _client_secret)
 _account = Account(_credentials, auth_flow_type='credentials', tenant_id=_tenant_id)
 # maybe switch to user authentication later?
+class ADAccountManager():
+    
+    def __init__(self, ad_server=None, ad_bind_user=None, ad_bind_password=None):
+        self.ad_server = ad_server
+        self.ad_bind_user = ad_bind_user
+        self.ad_bind_password = ad_bind_password
+        
+        
+    def _make_connection(self):
+        connection = Connection(
+            self.ad_server, 
+            user=self.ad_bind_user, 
+            password=self.ad_bind_password)
+        return connection
+    
+    def get_ad_user(self, username:str):
+        connection = self._make_connection()
+
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+        
+        
+        connection.search(
+            search_base=_base_ou, 
+            search_filter='(sAMAccountName={})'.format(username), 
+            attributes=['givenName', 'sn', 'userAccountControl','mail','sAMAccountName','physicalDeliveryOfficeName'])
+        
+        response = None
+        if len(connection.response) == 0:
+            log.error('Could not get user with username : {}'.format(username))
+        else:
+            response = connection.response[0]  
+
+            employee = Employee(
+                first_name = response['attributes']['givenName'],
+                last_name = response['attributes']['sn'],
+                dn = response['dn'],
+                user_account_control = response['attributes']['userAccountControl'],
+                email = response['attributes']['mail'],
+                username = response['attributes']['sAMAccountName'],
+                location = response['attributes']['physicalDeliveryOfficeName']
+            )
+            response = employee
+        connection.unbind()
+        return response
+    
+    def reset_ad_password(self, employee) -> bool:
+        connection = self.connect_to_ad()
+
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+        
+        employee.password = employee._random_password(8)
+
+        connection.extend.microsoft.modify_password(employee.dn, employee.password)
+        connection.modify(employee.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
+        result = connection.result
+        connection.unbind()
+        if result['result'] > 0:
+            log.error(result['description'])
+            return False
+        return True
+
+    def unlock_ad_account(self, employee) -> bool:
+        connection = self._make_connection()
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+
+        connection.extend.microsoft.unlock_account(employee.dn)
+        result = connection.result
+        connection.unbind()
+        
+        if result['result'] > 0:
+            log.error(result['description'])
+            return False
+        return True
+
+    def suspend_ad_account(self, employee) -> bool:
+        connection = self._make_connection()
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+
+        disabled_path = "ou=Disabled Users,{}".format(_base_ou)
+        #disable user
+        connection.modify(employee.dn, {'userAccountControl': [('MODIFY_REPLACE', 514)]})
+        #move user to disabled
+        connection.modify_dn(employee.dn, 'cn={}'.format(employee.full_name), new_superior=disabled_path)
+        result = connection.result
+        connection.unbind()
+        if result['result'] > 0:
+            log.error(result)
+            return False
+        return True
+    
+    def enable_ad_account(self, employee) -> bool:
+        connection = self._make_connection()
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+            
+        enabled_path = "ou=Domain Users,ou={} Office,{}".format(employee.location, _base_ou)
+        #Enable user
+        connection.modify(employee.dn, {'userAccountControl': [('MODIFY_REPLACE', 512)]})
+        #move user to DN
+        connection.modify_dn(employee.dn, 'cn={}'.format(employee.full_name), new_superior=enabled_path)
+        result = connection.result
+        connection.unbind()
+        if result['result'] > 0:
+            log.debug(result)
+            return False
+        return True
+    
+    def create_ad_account(self, employee):
+        connection = self._make_connection()
+        try:
+            connection.bind()
+            log.debug('Successfully connected to AD server')
+        except Exception as e:
+            log.error(e)
+            return connection.response
+
+        if self._check_if_username_exists(employee):
+            raise ValueError("Username already exists")
+        
+        response = None
+        log.debug('Adding user {}'.format(employee.dn))
+        connection.add(
+            employee.dn, 
+            ['person', 'user'], 
+            {
+                'sAMAccountName': employee.username, 
+                'userPrincipalName': employee.username + '@testdomain.local', 
+                'givenName': employee.first_name, 
+                'sn': employee.last_name, 
+                'displayName': employee.full_name,
+                'mail': employee.email_address,
+                'company': 'Decision Point Center',
+                'department': employee.department,
+                'title': employee.job_title,
+                'physicalDeliveryOfficeName': employee.location        
+            })
+       
+        if connection.result > 0:
+            log.error('User could not be created for {}.'.format(employee.dn))
+            response = connection.result
+        else:
+            log.debug('User {} created.'.format(employee.dn))
+            response = connection.response # set response to initial add response
+            connection.extend.microsoft.modify_password(employee.dn, employee.password)
+            if connection.result > 0:
+                log.error('Password could not be set for {}'.format(employee.dn))
+                response = connection.result
+            else: 
+                log.debug('Password set for {}.'.format(employee.dn))           
+                connection.modify(employee.dn, {'userAccountControl': ('MODIFY_REPLACE', [512])})
+                if connection.result > 0:
+                    log.error('Account could not be activated for {}'.format(employee.dn))
+                    response = connection.result
+                else:
+                    log.debug('Account activated for {}.'.format(employee.dn))
+                    connection.modify(employee.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
+                    if connection.result > 0:
+                        log.error('Account not set to force password change for {}'.format(employee.dn))
+                        response = connection.result
+                    else:
+                        log.debug('Account set to force password change for {}.'.format(employee.dn))
+        
+        connection.unbind()
+        return response
+    
+    def _check_if_username_exists(self, employee) -> bool:
+        connection = self._make_connection()
+        return connection.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(employee.username))
+
 
 class Employee():
     """ An Employee """
