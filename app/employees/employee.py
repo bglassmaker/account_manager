@@ -58,6 +58,53 @@ class ADAccountManager():
 
     def init_config(self, config):
         self.config.update(config)
+
+    def _contextualise_connection(self, connection):
+        """
+        Add a connection to the appcontext so it can be freed/unbound at
+        a later time if an exception occured and it was not freed.
+
+        Args:
+            connection (ldap3.Connection): Connection to add to the appcontext
+
+        """
+
+        ctx = stack.top
+        if ctx is not None:
+            if not hasattr(ctx, 'ldap3_manager_connections'):
+                ctx.ldap3_manager_connections = [connection]
+            else:
+                ctx.ldap3_manager_connections.append(connection)
+
+    def _decontextualise_connection(self, connection):
+        """
+        Remove a connection from the appcontext.
+
+        Args:
+            connection (ldap3.Connection): connection to remove from the
+                appcontext
+
+        """
+
+        ctx = stack.top
+        if ctx is not None and connection in ctx.ldap3_manager_connections:
+            ctx.ldap3_manager_connections.remove(connection)
+
+    def teardown(self, exception):
+        """
+        Cleanup after a request. Close any open connections.
+        """
+
+        ctx = stack.top
+        if ctx is not None:
+            if hasattr(ctx, 'ldap3_manager_connections'):
+                for connection in ctx.ldap3_manager_connections:
+                    self.destroy_connection(connection)
+            if hasattr(ctx, 'ldap3_manager_main_connection'):
+                log.debug(
+                    "Unbinding a connection used within the request context.")
+                ctx.ldap3_manager_main_connection.unbind()
+                ctx.ldap3_manager_main_connection = None
   
     def _make_connection(self, bind_user, bind_password, contextualise=True):
         log.debug('Opening connection with {}.'.format(bind_user))
