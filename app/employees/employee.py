@@ -2,9 +2,14 @@ import os
 import random
 import string
 import logging
+import ldap3
 from ldap3 import Server, ServerPool, Connection, ALL, NTLM
 from O365.utils import ApiComponent
 from O365 import Account
+try:
+    from flask import _app_ctx_stack as stack
+except ImportError:  # pragma: no cover
+    from flask import _request_ctx_stack as stack
 
 log = logging.getLogger(__name__)
 
@@ -29,29 +34,65 @@ _account = Account(_credentials, auth_flow_type='credentials', tenant_id=_tenant
 # maybe switch to user authentication later?
 class ADAccountManager():
     
-    def __init__(self, ad_server=None, ad_bind_user=None, ad_bind_password=None):
-        self.ad_server = ad_server
-        self.ad_bind_user = ad_bind_user
-        self.ad_bind_password = ad_bind_password
-        
-        
-    def _make_connection(self):
-        connection = Connection(
+    def __init__(self, app=None):
+        self.config = {}
+        self._ad_server_pool = ldap3.ServerPool(
+            [],
+            ldap3.FIRST,
+            active=1,
+            exhaust=10
+        )
+
+        if app is not None:
+            self.init_app(app)
+    
+    def init_app(self, app):
+        app.ad_account_manager = self
+
+        servers = list(self._ad_server_pool)
+        for s in servers():
+            self._ad_server_pool.remove(s)
+        self.init_config(app.config)
+
+        self.app = app
+
+    def init_config(self, config):
+        self.config.update(config)
+  
+    def _make_connection(self, bind_user, bind_password, contextualise=True):
+        log.debug('Opening connection with {}.'.format(bind_user))
+        connection = ldap3.Connection(
             self.ad_server, 
-            user=self.ad_bind_user, 
-            password=self.ad_bind_password)
+            user= bind_user, 
+            password=bind_password,
+            client_strategy=ldap3.SYNC,
+            raise_exceptions=True
+        )
+
+        if contextualise:
+            self._contextualise_connection(connection)
         return connection
+
+    def destroy_connection(self, connection):
+        """
+        Destroys a connection. Removes the connection from the appcontext, and
+        unbinds it.
+
+        Args:
+            connection (ldap3.Connection):  The connnection to destroy
+        """
+
+        log.debug("Destroying connection at <{0}>".format(hex(id(connection))))
+        self._decontextualise_connection(connection)
+        self.destroy_connection(connection)
     
     def get_ad_user(self, username:str):
-        connection = self._make_connection()
-
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
         
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
         
         connection.search(
             search_base=_base_ou, 
@@ -74,42 +115,38 @@ class ADAccountManager():
                 location = response['attributes']['physicalDeliveryOfficeName']
             )
             response = employee
-        connection.unbind()
+        self.destroy_connection(connection)
         return response
     
     def reset_ad_password(self, employee) -> bool:
-        connection = self.connect_to_ad()
 
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
         
         employee.password = employee._random_password(8)
 
         connection.extend.microsoft.modify_password(employee.dn, employee.password)
         connection.modify(employee.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
         result = connection.result
-        connection.unbind()
+        self.destroy_connection(connection)
         if result['result'] > 0:
             log.error(result['description'])
             return False
         return True
 
     def unlock_ad_account(self, employee) -> bool:
-        connection = self._make_connection()
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
 
         connection.extend.microsoft.unlock_account(employee.dn)
         result = connection.result
-        connection.unbind()
+        self.destroy_connection(connection)
         
         if result['result'] > 0:
             log.error(result['description'])
@@ -117,13 +154,11 @@ class ADAccountManager():
         return True
 
     def suspend_ad_account(self, employee) -> bool:
-        connection = self._make_connection()
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
 
         disabled_path = "ou=Disabled Users,{}".format(_base_ou)
         #disable user
@@ -131,20 +166,18 @@ class ADAccountManager():
         #move user to disabled
         connection.modify_dn(employee.dn, 'cn={}'.format(employee.full_name), new_superior=disabled_path)
         result = connection.result
-        connection.unbind()
+        self.destroy_connection(connection)
         if result['result'] > 0:
             log.error(result)
             return False
         return True
     
     def enable_ad_account(self, employee) -> bool:
-        connection = self._make_connection()
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
             
         enabled_path = "ou=Domain Users,ou={} Office,{}".format(employee.location, _base_ou)
         #Enable user
@@ -152,24 +185,22 @@ class ADAccountManager():
         #move user to DN
         connection.modify_dn(employee.dn, 'cn={}'.format(employee.full_name), new_superior=enabled_path)
         result = connection.result
-        connection.unbind()
+        self.destroy_connection(connection)
         if result['result'] > 0:
             log.debug(result)
             return False
         return True
     
     def create_ad_account(self, employee):
-        connection = self._make_connection()
-        try:
-            connection.bind()
-            log.debug('Successfully connected to AD server')
-        except Exception as e:
-            log.error(e)
-            return connection.response
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
 
         if self._check_if_username_exists(employee):
             raise ValueError("Username already exists")
-        
+
         response = None
         log.debug('Adding user {}'.format(employee.dn))
         connection.add(
@@ -213,12 +244,21 @@ class ADAccountManager():
                     else:
                         log.debug('Account set to force password change for {}.'.format(employee.dn))
         
-        connection.unbind()
+        self.destroy_connection(connection)
         return response
     
     def _check_if_username_exists(self, employee) -> bool:
-        connection = self._make_connection()
-        return connection.search(search_base=_base_ou, search_filter='(sAMAccountName={})'.format(employee.username))
+        connection = self._make_connection(
+            bind_user=self.config.get('LDAP_BIND_USER_DN'),
+            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
+        )
+        connection.bind()
+        search = connection.search(
+            search_base=_base_ou, 
+            search_filter='(sAMAccountName={})'.format(employee.username)
+            )
+        self.destroy_connection(connection)
+        return search
 
 
 class Employee():
