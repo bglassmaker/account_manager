@@ -7,9 +7,10 @@ logging.getLogger('flask_ldap3_login').setLevel(logging.DEBUG)
 users = {}
 
 class User(UserMixin):
-    def __init__(self, dn, username, data):
+    def __init__(self, dn, username, password, data):
         self.dn = dn
         self.username = username
+        self.password = password
         self.data = data
 
     def __repr__(self):
@@ -25,7 +26,7 @@ def load_user(id):
     return None
 
 @ldap_manager.save_user
-def save_user(dn, username, data, memberships):
-    user = User(dn,username,data)
+def save_user(dn, username, password, data):
+    user = User(dn=dn,username=username, password=password, data=data)
     users[dn] = user
     return user
