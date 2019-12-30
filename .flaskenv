@@ -1,0 +1,2 @@
+FLASK_APP=account_manager.py
+FLASK_ENV=development
