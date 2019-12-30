@@ -50,9 +50,14 @@ class ADAccountManager():
         app.ad_account_manager = self
 
         servers = list(self._ad_server_pool)
-        for s in servers():
+        for s in servers:
             self._ad_server_pool.remove(s)
         self.init_config(app.config)
+
+        if hasattr(app, 'teardown_appcontext'):
+            app.teardown_appcontext(self.teardown)
+        else:  # pragma: no cover
+            app.teardown_request(self.teardown)
 
         self.app = app
 
