@@ -528,8 +528,8 @@ class Employee():
 
         return data
 
-def get_all_accounts():
-    c = connect_to_ad(_ad_user, _ad_password)
+def get_all_accounts(user):
+    c = connect_to_ad(user.dn, user.password)
     c.bind()
     c.search(
         search_base=_base_ou,

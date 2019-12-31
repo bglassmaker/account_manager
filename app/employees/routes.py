@@ -1,5 +1,5 @@
 from flask import render_template, redirect, url_for, flash, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.employees import bp
 from app.employees.employee import Employee, get_ad_user, suspend_accounts, enable_accounts, get_all_accounts
 from app.employees.forms import CreateUserForm
@@ -70,7 +70,7 @@ def unlock_account():
 @bp.route('/users', methods=['GET'])
 @login_required
 def users():
-    users = get_all_accounts()
+    users = get_all_accounts(current_user)
 
     return render_template('employees/users.html', users=users)
 
