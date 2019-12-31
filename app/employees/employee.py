@@ -580,9 +580,14 @@ def check_result(result):
         exit(result)   
 
 def suspend_accounts(employee):
-    employee.suspend_ad_account()
+    if employee.suspend_ad_account():
+        return True
+    return False
+
     # employee.update_o365_account_status('False')
 
 def enable_accounts(employee):
-    employee.enable_ad_account()
+    if employee.enable_ad_account():
+        return True
+    return False
     # employee.update_o365_account_status('True')
