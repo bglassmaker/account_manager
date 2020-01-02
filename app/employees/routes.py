@@ -16,9 +16,9 @@ def create_user():
             location=form.location.data, 
             department=form.department.data, 
             job_title=form.job_title.data)
-        employee.create_ad_account()
+        employee.create_ad_account(current_user)
         #employee.create_o365_user()
-        flash('User Created')
+        flash('User {} Created'.format(employee.full_name))
         return redirect(url_for('employees.users'))
     return render_template('employees/create_user.html', title='Create User', form=form)
 
@@ -26,8 +26,8 @@ def create_user():
 @login_required
 def suspend_user():
     username = request.args.get('username')
-    user = get_ad_user(username)
-    if suspend_accounts(user):
+    employee = get_ad_user(username)
+    if suspend_accounts(current_user, employee):
         flash('User Disabled')
         return redirect(url_for('employees.users'))
     flash('User NOT Disabled', 'error')
@@ -37,8 +37,8 @@ def suspend_user():
 @login_required
 def enable_user():
     username = request.args.get('username')
-    user = get_ad_user(username)
-    if enable_accounts(user):
+    employee = get_ad_user(username)
+    if enable_accounts(current_user, employee):
         flash('User Enabled')
         return redirect(url_for('employees.users'))
     flash('User NOT enabled', 'error')
@@ -48,9 +48,10 @@ def enable_user():
 @login_required
 def password_reset():
     username = request.args.get('username')
-    user = get_ad_user(username)
-    if user.reset_ad_password():
-        flash('Password Reset for {}: {}'.format(user.full_name, user.password), 'message')
+    employee = get_ad_user(username)
+    if employee.reset_ad_password(current_user):
+        # this might be crapping out the old password? because it's taken from the employee object before?
+        flash('Password Reset for {}: {}'.format(employee.full_name, employee.password), 'message')
         return redirect(url_for('employees.users'))
     flash('Password not reset', 'error')
     return redirect(url_for('employees.users'))
@@ -59,10 +60,9 @@ def password_reset():
 @login_required
 def unlock_account():
     username = request.args.get('username')
-    user = get_ad_user(username)
-    user.unlock_ad_account()
-    if user.unlock_ad_account():
-        flash('Account unlocked for {}'.format(user.full_name), 'message')
+    employee = get_ad_user(username)
+    if employee.unlock_ad_account(current_user):
+        flash('Account unlocked for {}'.format(employee.full_name), 'message')
         return redirect(url_for('employees.users'))
     flash('Account not unlocked', 'error')
     return redirect(url_for('employees.users'))  

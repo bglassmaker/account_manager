@@ -111,12 +111,15 @@ class ADAccountManager():
                 ctx.ldap3_manager_main_connection.unbind()
                 ctx.ldap3_manager_main_connection = None
   
-    def _make_connection(self, bind_user, bind_password, contextualise=True):
+    def _make_connection(self, user:None, bind_user:None, bind_password:None, contextualise=True):
+        if user and (bind_user or bind_password):
+            log.error('Please only provide a user or bind user')
+            raise ValueError('Please only provide a user or bind user, not both.')
         log.debug('Opening connection with {}.'.format(bind_user))
         connection = ldap3.Connection(
             self.ad_server, 
-            user= bind_user, 
-            password=bind_password,
+            user= user.dn or bind_user, 
+            password= user.password or bind_password,
             client_strategy=ldap3.SYNC,
             raise_exceptions=True
         )
@@ -138,12 +141,9 @@ class ADAccountManager():
         self._decontextualise_connection(connection)
         self.destroy_connection(connection)
     
-    def get_ad_user(self, username:str):
+    def get_ad_user(self, user, username:str):
         
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+        connection = self._make_connection(user=user)
         connection.bind()
         
         connection.search(
@@ -170,12 +170,9 @@ class ADAccountManager():
         self.destroy_connection(connection)
         return response
     
-    def reset_ad_password(self, employee) -> bool:
+    def reset_ad_password(self, user, employee) -> bool:
 
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+        connection = self._make_connection(user=user)
         connection.bind()
         
         employee.password = employee._random_password(8)
@@ -189,11 +186,8 @@ class ADAccountManager():
             return False
         return True
 
-    def unlock_ad_account(self, employee) -> bool:
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+    def unlock_ad_account(self, user, employee) -> bool:
+        connection = self._make_connection(user=user)
         connection.bind()
 
         connection.extend.microsoft.unlock_account(employee.dn)
@@ -205,11 +199,8 @@ class ADAccountManager():
             return False
         return True
 
-    def suspend_ad_account(self, employee) -> bool:
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+    def suspend_ad_account(self, user, employee) -> bool:
+        connection = self._make_connection(user=user)
         connection.bind()
 
         disabled_path = "ou=Disabled Users,{}".format(_base_ou)
@@ -224,11 +215,8 @@ class ADAccountManager():
             return False
         return True
     
-    def enable_ad_account(self, employee) -> bool:
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+    def enable_ad_account(self, user, employee) -> bool:
+        connection = self._make_connection(user=user)
         connection.bind()
             
         enabled_path = "ou=Domain Users,ou={} Office,{}".format(employee.location, _base_ou)
@@ -243,11 +231,8 @@ class ADAccountManager():
             return False
         return True
     
-    def create_ad_account(self, employee):
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+    def create_ad_account(self, user, employee):
+        connection = self._make_connection(user=user)
         connection.bind()
 
         if self._check_if_username_exists(employee):
@@ -299,11 +284,8 @@ class ADAccountManager():
         self.destroy_connection(connection)
         return response
     
-    def _check_if_username_exists(self, employee) -> bool:
-        connection = self._make_connection(
-            bind_user=self.config.get('LDAP_BIND_USER_DN'),
-            bind_password=self.config.get('LDAP_BIND_USER_PASSWORD')
-        )
+    def _check_if_username_exists(self, user, employee) -> bool:
+        connection = self._make_connection(user=user)
         connection.bind()
         search = connection.search(
             search_base=_base_ou, 
@@ -364,8 +346,8 @@ class Employee():
     Active Directory
     '''
     
-    def reset_ad_password(self) -> bool:
-        c = connect_to_ad(_ad_user,_ad_password)
+    def reset_ad_password(self, user) -> bool:
+        c = connect_to_ad(user.dn, user.password)
         c.bind()
         self.password = self._random_password(8)
 
@@ -378,8 +360,8 @@ class Employee():
             return False
         return True
     
-    def unlock_ad_account(self) -> bool:
-        c = connect_to_ad(_ad_user,_ad_password)
+    def unlock_ad_account(self, user) -> bool:
+        c = connect_to_ad(user.dn, user.password)
         c.bind()
         c.extend.microsoft.unlock_account(self.dn)
         result = c.result
@@ -390,8 +372,8 @@ class Employee():
             return False
         return True
     
-    def suspend_ad_account(self) -> bool:
-        c = connect_to_ad(_ad_user,_ad_password)
+    def suspend_ad_account(self, user) -> bool:
+        c = connect_to_ad(user.dn, user.password)
         c.bind()
         disabled_path = "ou=Disabled Users,{}".format(_base_ou)
         #disable user
@@ -405,8 +387,8 @@ class Employee():
             return False
         return True
     
-    def enable_ad_account(self) -> bool:
-        c = connect_to_ad(_ad_user,_ad_password)
+    def enable_ad_account(self, user) -> bool:
+        c = connect_to_ad(user.dn, user.password)
         c.bind()
         enabled_path = "ou=Domain Users,ou={} Office,{}".format(self.location, _base_ou)
         #Enable user
@@ -420,14 +402,12 @@ class Employee():
             return False
         return True
             
-    def create_ad_account(self):
-        c = connect_to_ad(_ad_user,_ad_password)
+    def create_ad_account(self, user):
+        c = connect_to_ad(user.dn, user.password)
         c.bind()
         # if self.check_if_username_exists():
         #     raise ValueError("Username already exists")
 
-        log.debug(self.dn)
-        log.debug(self.password)
         log.debug('Adding user {}'.format(self.dn))
         c.add(
             self.dn, 
@@ -444,11 +424,19 @@ class Employee():
                 'title': self.job_title,
                 'physicalDeliveryOfficeName': self.location        
             })
-
+        if c.result['result'] > 0:
+            log.debug(c.result['description'])
         c.extend.microsoft.modify_password(self.dn, self.password)
-        log.debug(c.result)
+        log.debug(c.result['description'])
+        print("Modify Password: " + str(c.result))
         c.modify(self.dn, {'userAccountControl': ('MODIFY_REPLACE', [512])})
+        print("Enable User : " + str(c.result))
+        if c.result['result'] > 0:
+            log.debug(c.result['description'])
         c.modify(self.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
+        print("Password Change : " + str(c.result))
+        if c.result['result'] > 0:
+            log.debug(c.result['description'])
         if c.bind():
             c.unbind()
         return [c.result, self.password]
@@ -579,15 +567,12 @@ def check_result(result):
     if not result['result'] == 0:
         exit(result)   
 
-def suspend_accounts(employee):
-    if employee.suspend_ad_account():
+def suspend_accounts(user, employee):
+    if employee.suspend_ad_account(user): #and employee.update_o365_account_status('False'):
         return True
     return False
 
-    # employee.update_o365_account_status('False')
-
-def enable_accounts(employee):
-    if employee.enable_ad_account():
+def enable_accounts(user, employee):
+    if employee.enable_ad_account(user): # and employee.update_o365_account_status('True'):
         return True
     return False
-    # employee.update_o365_account_status('True')
