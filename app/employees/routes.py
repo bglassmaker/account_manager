@@ -50,7 +50,6 @@ def password_reset():
     username = request.args.get('username')
     employee = get_ad_user(username)
     if employee.reset_ad_password(current_user):
-        # this might be crapping out the old password? because it's taken from the employee object before?
         flash('Password Reset for {}: {}'.format(employee.full_name, employee.password), 'message')
         return redirect(url_for('employees.users'))
     flash('Password not reset', 'error')
