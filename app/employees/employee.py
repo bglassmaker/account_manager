@@ -408,7 +408,7 @@ class Employee():
         # if self.check_if_username_exists():
         #     raise ValueError("Username already exists")
 
-        log.debug('Adding user {} wish password {}'.format(self.dn, self.password))
+        log.debug('Adding user {} with password {}'.format(self.dn, self.password))
         c.add(
             self.dn, 
             ['person', 'user'], 
