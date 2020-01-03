@@ -355,10 +355,12 @@ class Employee():
         c.modify(self.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
         result = c.result
         c.unbind()
+
         if result['result'] > 0:
-            log.debug(result['description'])
-            return False
-        return True
+            log.debug(result)
+            raise
+
+        return result
     
     def unlock_ad_account(self, user) -> bool:
         c = connect_to_ad(user.dn, user.password)
@@ -369,10 +371,11 @@ class Employee():
         
         if result['result'] > 0:
             log.debug(result['description'])
-            return False
-        return True
+            raise
+
+        return result
     
-    def suspend_ad_account(self, user) -> bool:
+    def suspend_ad_account(self, user):
         c = connect_to_ad(user.dn, user.password)
         c.bind()
         disabled_path = "ou=Disabled Users,{}".format(_base_ou)
@@ -382,12 +385,14 @@ class Employee():
         c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=disabled_path)
         result = c.result
         c.unbind()
+
         if result['result'] > 0:
             log.debug(result)
-            return False
-        return True
+            raise
+
+        return result
     
-    def enable_ad_account(self, user) -> bool:
+    def enable_ad_account(self, user):
         c = connect_to_ad(user.dn, user.password)
         c.bind()
         enabled_path = "ou=Domain Users,ou={} Office,{}".format(self.location, _base_ou)
@@ -397,10 +402,12 @@ class Employee():
         c.modify_dn(self.dn, 'cn={}'.format(self.full_name), new_superior=enabled_path)
         result = c.result
         c.unbind()
+
         if result['result'] > 0:
             log.debug(result)
-            return False
-        return True
+            raise
+
+        return result
             
     def create_ad_account(self, user):
         c = connect_to_ad(user.dn, user.password)
@@ -520,7 +527,14 @@ def get_all_accounts(user):
     c.search(
         search_base=_base_ou,
         search_filter='(objectclass=person)', # (&(objectclass=person)(|(userAccountControl=512)(userAccountControl=514)))
-        attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn', 'sAMAccountName', 'physicalDeliveryOfficeName'])
+        attributes=['cn',
+            'userAccountControl', 
+            'mail', 
+            'givenName', 
+            'sn', 
+            'sAMAccountName', 
+            'physicalDeliveryOfficeName'
+            ])
     response = c.response
     c.unbind()
     employees = {'enabled users':[], 'disabled users':[], 'other users':[]}
@@ -541,6 +555,10 @@ def get_all_accounts(user):
             employees['disabled users'].append(employee)
         else:
             employees['other users'].append(employee)
+    
+    if not employees:
+        raise
+    
     return employees
 
 def get_ad_user(username:str):
@@ -549,9 +567,16 @@ def get_ad_user(username:str):
     c.search(
         search_base=_base_ou, 
         search_filter='(sAMAccountName={})'.format(username), 
-        attributes=['givenName', 'sn', 'userAccountControl','mail','sAMAccountName','physicalDeliveryOfficeName'])
+        attributes=[
+            'givenName', 
+            'sn', 
+            'userAccountControl',
+            'mail',
+            'sAMAccountName',
+            'physicalDeliveryOfficeName'
+            ])
     response = c.response[0]  
-    print(response) 
+    c.unbind()
     employee = Employee(
         first_name = response['attributes']['givenName'],
         last_name = response['attributes']['sn'],
@@ -561,15 +586,11 @@ def get_ad_user(username:str):
         username = response['attributes']['sAMAccountName'],
         location = response['attributes']['physicalDeliveryOfficeName']
     )
-    c.unbind()
+    
     return employee
 
 def connect_to_ad(user, password):
     return Connection(_server_pool, user=user, password=password) 
-
-def check_result(result):
-    if not result['result'] == 0:
-        exit(result)   
 
 def suspend_accounts(user, employee):
     if employee.suspend_ad_account(user): #and employee.update_o365_account_status('False'):
