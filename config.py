@@ -13,6 +13,7 @@ class Config:
     LDAP_BASE_DN = 'dc=testdomain,dc=local'
     LDAP_USER_DN = 'ou=TestDomain'
     LDAP_GROUP_DN = 'ou=TestDomain'
+    LDAP_USER_SEARCH_SCOPE = 'SUBTREE'
     LDAP_USER_RDN_ATTR = 'cn'
     LDAP_USER_LOGIN_ATTR = 'sAMACCOUNTName'
     LDAP_BIND_USER_DN = os.environ.get('ADUSERTEST')
