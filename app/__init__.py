@@ -19,6 +19,7 @@ ad_account_manager = ADAccountManager()
 toolbar = DebugToolbarExtension()
 
 logging.getLogger('app.employees.employee').setLevel(logging.DEBUG)
+logging.getLogger('flask_ldap3_login').setLevel(logging.DEBUG)
 
 def create_app(config_class=Config):
     app = Flask(__name__)
