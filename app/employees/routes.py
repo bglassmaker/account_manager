@@ -15,7 +15,8 @@ def create_user():
             username=form.username.data, 
             location=form.location.data, 
             department=form.department.data, 
-            job_title=form.job_title.data)
+            job_title=form.job_title.data
+            )
         employee.create_ad_account(current_user)
         #employee.create_o365_user()
         flash('User {} Created'.format(employee.full_name))

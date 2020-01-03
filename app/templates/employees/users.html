@@ -9,10 +9,10 @@
     <a href="#disabled" id="disabled-tab" class="nav-item nav-link" data-toggle="tab" role="tab" aria-controls="disabled" aria-selected="false">Disabled</a>
     <a href="#other" id="other-tab" class="nav-item nav-link" data-toggle="tab" role="tab" aria-controls="other" aria-selected="other">Other</a>
 </nav>
-<div class="tab-content" id="users-tabContent">
-    <div class="tab-pane fade show active" id="enabled" role="tabpanel" aria-labelledby="enabled-tab">
+<div class="tab-content border-right border-bottom border-left" id="users-tabContent" style="padding: 10px;">
+    <div class="container tab-pane fade show active" id="enabled" role="tabpanel" aria-labelledby="enabled-tab">
         {% for u in users['enabled users'] %}
-        <div class="row border">
+        <div class="row border" style="padding: 10px; margin-bottom: 10px;">
             <div class="col-8">
                 <ul>
                     <li>Name: {{u.full_name}}</li>
@@ -30,13 +30,12 @@
                 </span>
             </div>
         </div>
-        <br>
         {% endfor %}
     </div>
     
-    <div class="tab-pane fade" id="disabled" role="tabpanel" aria-labelledby="disabled-tab">
+    <div class="container tab-pane fade" id="disabled" role="tabpanel" aria-labelledby="disabled-tab">
         {% for u in users['disabled users'] %}
-        <div class="row border">
+        <div class="row border" style="padding: 10px; margin-bottom: 10px;">
             <div class="col-8">
                 <ul>
                     <li>Name: {{u.full_name}}</li>
@@ -54,13 +53,12 @@
                 </span>
             </div>
         </div>
-        <br>
         {% endfor %}
     </div>
 
-    <div class="tab-pane fade" id="other" role="tabpanel" aria-labelledby="other-tab">
+    <div class="container tab-pane fade" id="other" role="tabpanel" aria-labelledby="other-tab">
         {% for u in users['other users'] %}
-        <div class="row border">
+        <div class="row border" style="padding: 10px; margin-bottom: 10px;">
             <div class="col-8">
                 <ul>
                     <li>Name: {{u.full_name}}</li>
@@ -79,7 +77,6 @@
                 </span>
             </div>
         </div>
-        <br>
         {% endfor %}        
     </div>
 
