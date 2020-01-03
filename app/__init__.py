@@ -18,6 +18,8 @@ ad_account_manager = ADAccountManager()
 
 toolbar = DebugToolbarExtension()
 
+logging.getLogger('app.employees.employee').setLevel(logging.DEBUG)
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(Config)

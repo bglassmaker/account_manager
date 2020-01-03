@@ -408,7 +408,7 @@ class Employee():
         # if self.check_if_username_exists():
         #     raise ValueError("Username already exists")
 
-        log.debug('Adding user {}'.format(self.dn))
+        log.debug('Adding user {} wish password {}'.format(self.dn, self.password))
         c.add(
             self.dn, 
             ['person', 'user'], 
@@ -425,18 +425,16 @@ class Employee():
                 'physicalDeliveryOfficeName': self.location        
             })
         if c.result['result'] > 0:
-            log.debug(c.result['description'])
+            log.debug("User not created : " + str(c.result))
         c.extend.microsoft.modify_password(self.dn, self.password)
-        log.debug(c.result['description'])
-        print("Modify Password: " + str(c.result))
+        if c.result['result'] > 0:
+            log.debug("Password not created {}: ".format(self.password) + str(c.result))
         c.modify(self.dn, {'userAccountControl': ('MODIFY_REPLACE', [512])})
-        print("Enable User : " + str(c.result))
         if c.result['result'] > 0:
-            log.debug(c.result['description'])
+            log.debug("User not enabled : " + str(c.result))
         c.modify(self.dn, {'pwdLastSet': ('MODIFY_REPLACE', [0])})
-        print("Password Change : " + str(c.result))
         if c.result['result'] > 0:
-            log.debug(c.result['description'])
+            log.debug("Password not set to force reset : " + str(c.result))
         if c.bind():
             c.unbind()
         return [c.result, self.password]
