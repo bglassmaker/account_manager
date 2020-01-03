@@ -519,11 +519,11 @@ def get_all_accounts(user):
     c.bind()
     c.search(
         search_base=_base_ou,
-        search_filter='(&(objectclass=person)(|(userAccountControl=512)(userAccountControl=514)))',
+        search_filter='(objectclass=person)', # (&(objectclass=person)(|(userAccountControl=512)(userAccountControl=514)))
         attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn', 'sAMAccountName'])
     response = c.response
     c.unbind()
-    employees = []
+    employees = {'enabled users':[], 'disabled users':[], 'other users':[]}
     for r in response:
         employee = Employee(
             first_name = r['attributes']['givenName'],
@@ -534,7 +534,12 @@ def get_all_accounts(user):
             dn = r['dn'],
             user_account_control = r['attributes']['userAccountControl']
         )
-        employees.append(employee)
+        if employee.user_account_control == 512:
+            employees['enabled users'].append(employee)
+        elif employee.user_account_control == 514:
+            employees['disabled users'].append(employee)
+        else:
+            employees['other users'].append(employee)
     return employees
 
 def get_ad_user(username:str):
