@@ -520,7 +520,7 @@ def get_all_accounts(user):
     c.search(
         search_base=_base_ou,
         search_filter='(objectclass=person)', # (&(objectclass=person)(|(userAccountControl=512)(userAccountControl=514)))
-        attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn', 'sAMAccountName'])
+        attributes=['cn','userAccountControl', 'mail', 'givenName', 'sn', 'sAMAccountName', 'physicalDeliveryOfficeName'])
     response = c.response
     c.unbind()
     employees = {'enabled users':[], 'disabled users':[], 'other users':[]}
@@ -532,7 +532,8 @@ def get_all_accounts(user):
             username = r['attributes']['sAMAccountName'],
             email_address = r['attributes']['mail'],
             dn = r['dn'],
-            user_account_control = r['attributes']['userAccountControl']
+            user_account_control = r['attributes']['userAccountControl'],
+            location = r['attributes']['physicalDeliveryOfficeName']
         )
         if employee.user_account_control == 512:
             employees['enabled users'].append(employee)
