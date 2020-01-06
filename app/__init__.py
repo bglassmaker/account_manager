@@ -5,7 +5,7 @@ from flask import Flask, request, current_app
 from flask_login import LoginManager
 from flask_ldap3_login import LDAP3LoginManager
 from flask_bootstrap import Bootstrap
-from app.employees.employee import ADAccountManager
+#from app.employees.employee import ADAccountManager
 from config import Config
 
 from flask_debugtoolbar import DebugToolbarExtension
@@ -14,7 +14,7 @@ bootstrap = Bootstrap()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 ldap_manager = LDAP3LoginManager()
-ad_account_manager = ADAccountManager()
+#ad_account_manager = ADAccountManager()
 
 toolbar = DebugToolbarExtension()
 
@@ -28,7 +28,7 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     ldap_manager.init_app(app)
     bootstrap.init_app(app)
-    ad_account_manager.init_app(app)
+    #ad_account_manager.init_app(app)
 
     #toolbar.init_app(app)
 
