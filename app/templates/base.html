@@ -1,7 +1,7 @@
 {% extends 'bootstrap/base.html' %}
 
 {% block title %}
-  {{ title }}
+  Decision Point : {{ title }}
 {% endblock %}
 {% block navbar %}
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -14,8 +14,15 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
           <li class="nav-item active"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('employees.users') }}">Users</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('employees.create_user') }}">Create User</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="usersDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              User Tools
+            </a>
+            <div class="dropdown-menu" aria-labelledby="usersDropdown">
+              <a class="dropdown-item" href="{{ url_for('employees.users') }}">All Users</a>
+              <a class="dropdown-item" href="{{ url_for('employees.create_user') }}">Create User</a>
+            </div>
+          </li>
         </ul>
         <ul class="nav navbar-nav navbar-right">
           {% if current_user.is_anonymous %}

@@ -72,5 +72,4 @@ def unlock_account():
 def users():
     users = get_all_accounts(current_user)
 
-    return render_template('employees/users.html', users=users)
-
+    return render_template('employees/users.html', users=users, title='All Users')
