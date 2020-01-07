@@ -41,9 +41,6 @@ class User(ApiComponent):
         self.show_in_address_boot = cloud_data.get('showInAddressList')
         self.user_type = cloud_data.get('userType')
 
-
-
-
     def create_o365_account(self, employee):
         """ Creates a user
 
@@ -75,7 +72,7 @@ class User(ApiComponent):
         return response.json()
 
     def update_o365_account_status(self, user_principal_name, account_enabled):
-        if not username:
+        if not user_principal_name:
             raise ValueError("Please provide a valid username")
         if not account_enabled:
             raise ValueError("Please provide a valid account status")
@@ -84,7 +81,7 @@ class User(ApiComponent):
             'accountEnabled': account_enabled
         }
 
-        url = self.build_url(self._endpoints.get('user')).format('username')
+        url = self.build_url(self._endpoints.get('user')).format(id=user_principal_name)
         response = self.con.post(url, data)
 
         if not response:
