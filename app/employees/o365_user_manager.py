@@ -6,7 +6,7 @@ class User(ApiComponent):
     Office 365
     '''
 
-    endpoints = {
+    _endpoints = {
         # endpoints for user controls
         'user': '/users/{id}',
         'users': '/users', 
@@ -71,7 +71,7 @@ class User(ApiComponent):
         
         return response.json()
 
-    def update_o365_account_status(self, user_principal_name, account_enabled):
+    def update_o365_update_account_status(self, user_principal_name, account_enabled):
         if not user_principal_name:
             raise ValueError("Please provide a valid username")
         if not account_enabled:
@@ -82,7 +82,7 @@ class User(ApiComponent):
         }
 
         url = self.build_url(self._endpoints.get('user')).format(id=user_principal_name)
-        response = self.con.post(url, data)
+        response = self.con.patch(url, data)
 
         if not response:
             return None
@@ -100,7 +100,7 @@ class User(ApiComponent):
 
         url = self.build_url(self._endpoints.get('user')).format(id=user_principal_name)
         
-        response = self.con.get(url)
+        response = self.con.get(url+'?$select=givenName,surname,displayName,department,jobTitle,mail,userPrincipalName,accountEnabled')
 
         if not response:
             return None

@@ -18,3 +18,7 @@ class Config:
     LDAP_USER_LOGIN_ATTR = 'sAMACCOUNTName'
     LDAP_BIND_USER_DN = os.environ.get('ADUSERTEST')
     LDAP_BIND_USER_PASSWORD = os.environ.get('ADPASSWORDTEST')
+    # Office365
+    O365_CLIENT_ID = os.environ.get('O365_APPID')
+    O365_CLIENT_SECRET = os.environ.get('O365_CLIENT_SECRET')
+    O365_TENANT_ID = os.environ.get('O365_TENANT_ID')
