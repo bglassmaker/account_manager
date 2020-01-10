@@ -1,5 +1,8 @@
+import logging
 from O365.utils import ApiComponent
 from O365 import Account
+
+log = logging.getLogger(__name__)
 
 class User(ApiComponent): 
     '''

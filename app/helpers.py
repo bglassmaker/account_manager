@@ -1,11 +1,12 @@
+import os
 from O365 import Account, MSGraphProtocol
-from flask import current_app
+from app import ad_account_manager
 from app.employees.employee import Employee 
 from app.employees.o365_user_manager import User as o365_user
 
-client_id = current_app.config.get('O365_CLIENT_ID')
-client_secret = current_app.config.get('O365_CLIENT_SECRET')
-tenant_id = current_app.config.get('O365_TENANT_ID')
+client_id = os.environ.get('O365_CLIENT_ID')
+client_secret = os.environ.get('O365_CLIENT_SECRET')
+tenant_id = os.environ.get('O365_TENANT_ID')
 credentials = (client_id, client_secret)
 protocol =  MSGraphProtocol()
 account = Account(credentials, auth_flow_type='credentials', tenant_id=tenant_id, protocol=protocol)
@@ -39,3 +40,6 @@ def update_o365_account_status(email, account_enabled):
         account.authenticate
     
     return user.update_o365_update_account_status
+
+def get_ad_user(username):
+    return ad_account_manager.get_ad_user(username)
